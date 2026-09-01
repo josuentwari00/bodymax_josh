@@ -13,16 +13,31 @@ export default async (event) => {
     await connectDB()
 
     if (user.role === 'club') {
+      const now = new Date()
       const events = await Event.find().lean()
-      const regs = await Registration.find({ clubId: user.clubId }).lean()
+      const regs = await Registration.find({ clubId: user.clubId }).sort({ createdAt: -1 }).lean()
+      const recent = await Registration.find({ clubId: user.clubId })
+        .sort({ createdAt: -1 })
+        .limit(8)
+        .populate('boxerId', 'fullName gender weightCategory ageCategory')
+        .populate('eventId', 'name eventDate feeStructure')
+        .lean()
+
+      const openEvents = events
+        .filter((e) => e.registrationOpen)
+        .sort((a, b) => (a.registrationDeadline || a.eventDate || 0) - (b.registrationDeadline || b.eventDate || 0))
+        .slice(0, 5)
+
       return success({
         dashboard: {
           boxerCount: await Boxer.countDocuments({ clubId: user.clubId }),
           registeredCount: regs.length,
           pendingCount: regs.filter((r) => r.status === 'pending_approval' || r.status === 'needs_correction').length,
           approvedCount: regs.filter((r) => ['approved', 'payment_pending', 'payment_confirmed', 'awaiting_weighin', 'weighed', 'eligible'].includes(r.status)).length,
-          eventsOpen: events.filter((e) => e.registrationOpen).length,
-          recentRegistrations: regs.slice(-8).reverse(),
+          pendingPayments: regs.filter((r) => r.payment?.status === 'submitted' || r.status === 'payment_pending').length,
+          eventsOpen: openEvents.length,
+          openEvents,
+          recentRegistrations: recent,
         },
       })
     }

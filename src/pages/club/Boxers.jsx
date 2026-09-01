@@ -113,13 +113,19 @@ export default function ClubBoxers() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">My Boxers</h1>
           <p className="text-sm text-slate-500">Manage your club's boxer database</p>
         </div>
-        <Button onClick={openCreate}>+ Add Boxer</Button>
+        <div className="flex shrink-0 items-center gap-3">
+          {boxers && boxers.length > 0 && <Badge>{boxers.length} boxer{boxers.length === 1 ? '' : 's'}</Badge>}
+          <Button onClick={openCreate} className="hidden sm:inline-flex">+ Add Boxer</Button>
+        </div>
       </div>
+      {boxers && boxers.length > 0 && (
+        <Button onClick={openCreate} className="mb-4 w-full sm:hidden">+ Add Boxer</Button>
+      )}
 
       <Card>
         <CardBody className="p-0">
@@ -130,20 +136,20 @@ export default function ClubBoxers() {
           ) : (
             <ul className="divide-y divide-slate-200">
               {boxers.map((b) => (
-                <li key={b._id} className="flex items-center justify-between gap-3 px-5 py-4">
-                  <div>
+                <li key={b._id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+                  <div className="min-w-0">
                     <p className="font-medium text-slate-900">{b.fullName}</p>
                     <p className="text-sm text-slate-500">
                       {b.gender === 'M' ? 'Male' : b.gender === 'F' ? 'Female' : 'Gender N/A'}
                       {b.dateOfBirth && ` · ${new Date(b.dateOfBirth).toLocaleDateString()}`}
                       {b.nationality && ` · ${b.nationality}`}
                     </p>
-                    <div className="mt-1 flex gap-2">
+                    <div className="mt-1 flex flex-wrap gap-2">
                       {b.weightCategory && <Badge>{b.weightCategory}</Badge>}
                       {b.ageCategory && <Badge>{b.ageCategory}</Badge>}
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex shrink-0 gap-2">
                     <Button size="sm" variant="secondary" onClick={() => openEdit(b)}>Edit</Button>
                     <Button size="sm" variant="danger" onClick={() => handleDelete(b)}>Delete</Button>
                   </div>
