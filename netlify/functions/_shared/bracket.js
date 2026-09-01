@@ -1,4 +1,4 @@
-import Bout from '../models/Bout.js'
+import Bout from './models/Bout.js'
 
 export function nextPowerOfTwo(n) {
   let p = 1
