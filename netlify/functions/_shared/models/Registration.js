@@ -23,7 +23,7 @@ const RegistrationSchema = new mongoose.Schema(
     category: {
       weight: { type: String, default: '' },
       age: { type: String, default: '' },
-      gender: { type: String, enum: ['M', 'F'], default: '' },
+      gender: { type: String, enum: ['', 'M', 'F'], default: '' },
     },
 
     status: {
