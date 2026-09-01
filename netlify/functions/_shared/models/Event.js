@@ -41,6 +41,12 @@ const EventSchema = new mongoose.Schema(
       acceptedMethods: [{ type: String }],
     },
 
+    promoterContact: {
+      name: { type: String, default: '' },
+      phone: { type: String, default: '' },
+      email: { type: String, default: '' },
+    },
+
     requirePayment: { type: Boolean, default: false },
     requireWeighIn: { type: Boolean, default: true },
 

@@ -4,7 +4,7 @@ import { api } from '../../utils/api.js'
 import { useToast } from '../../context/ToastContext.jsx'
 import { Button } from '../../components/Button.jsx'
 import { Card } from '../../components/Card.jsx'
-import { Loading, Empty } from '../../components/Loading.jsx'
+import { Loading, Empty, Spinner } from '../../components/Loading.jsx'
 import { StatusBadge, Badge } from '../../components/Badge.jsx'
 import { Modal } from '../../components/Modal.jsx'
 import { Input, Textarea, Select } from '../../components/Field.jsx'
@@ -24,6 +24,18 @@ export default function EventDetail() {
   const [weighReg, setWeighReg] = useState(null)
   const [weighWeight, setWeighWeight] = useState('')
   const [weighNotes, setWeighNotes] = useState('')
+  const [setupOpen, setSetupOpen] = useState(false)
+  const [setup, setSetup] = useState({
+    bankName: '',
+    accountName: '',
+    accountNumber: '',
+    paymentInstructions: '',
+    acceptedMethods: [],
+    contactName: '',
+    contactPhone: '',
+    contactEmail: '',
+  })
+  const [methodText, setMethodText] = useState('')
 
   const load = () => {
     api(`/events?id=${id}`).then((d) => setEvent(d.event)).catch(() => {})
@@ -80,6 +92,59 @@ export default function EventDetail() {
     }
   }
 
+  const openSetup = () => {
+    setSetup({
+      bankName: event.paymentAccount?.bankName || '',
+      accountName: event.paymentAccount?.accountName || '',
+      accountNumber: event.paymentAccount?.accountNumber || '',
+      paymentInstructions: event.paymentAccount?.paymentInstructions || '',
+      acceptedMethods: event.paymentAccount?.acceptedMethods || [],
+      contactName: event.promoterContact?.name || '',
+      contactPhone: event.promoterContact?.phone || '',
+      contactEmail: event.promoterContact?.email || '',
+    })
+    setMethodText('')
+    setSetupOpen(true)
+  }
+
+  const addMethod = () => {
+    const v = methodText.trim()
+    if (v && !setup.acceptedMethods.includes(v)) {
+      setSetup({ ...setup, acceptedMethods: [...setup.acceptedMethods, v] })
+      setMethodText('')
+    }
+  }
+
+  const saveSetup = async () => {
+    setBusy(true)
+    try {
+      await api(`/events/update?id=${id}`, {
+        method: 'PATCH',
+        body: {
+          paymentAccount: {
+            bankName: setup.bankName,
+            accountName: setup.accountName,
+            accountNumber: setup.accountNumber,
+            paymentInstructions: setup.paymentInstructions,
+            acceptedMethods: setup.acceptedMethods,
+          },
+          promoterContact: {
+            name: setup.contactName,
+            phone: setup.contactPhone,
+            email: setup.contactEmail,
+          },
+        },
+      })
+      toast('Payment account & contact updated')
+      setSetupOpen(false)
+      load()
+    } catch (err) {
+      toast(err.message, 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (!event) return <Loading />
   if (!registrations) return <Loading />
 
@@ -92,24 +157,28 @@ export default function EventDetail() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <button onClick={() => navigate('/app/events')} className="mb-1 text-sm text-brand-600 hover:underline">← Events</button>
-          <h1 className="text-2xl font-bold text-slate-900">{event.name}</h1>
-          <p className="text-sm text-slate-500">
-            {event.venue}{event.location && ` · ${event.location}`}
-            {event.eventDate && ` · ${new Date(event.eventDate).toLocaleDateString()}`}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={() => navigate(`/app/events/${id}/draws`)}>Draws</Button>
-          <Button variant="secondary" onClick={() => navigate(`/app/events/${id}/bouts`)}>Bouts</Button>
-          <Button variant="secondary" onClick={() => navigate(`/app/events/${id}/results`)}>Results</Button>
-          {event.registrationOpen ? (
-            <Button variant="secondary" onClick={() => toggleRegistration(false)}>Close Registration</Button>
-          ) : (
-            <Button onClick={() => toggleRegistration(true)}>Open Registration</Button>
-          )}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-brand-900 px-6 py-6 text-white shadow-lg">
+        <div className="absolute -right-10 -top-10 h-44 w-44 rounded-full bg-brand-600/30 blur-2xl" />
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <button onClick={() => navigate('/app/events')} className="mb-1 text-sm text-blue-200 hover:text-white">← Events</button>
+            <h1 className="text-2xl font-bold sm:text-3xl">{event.name}</h1>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-300">
+              <span>{event.venue}{event.location && ` · ${event.location}`}</span>
+              {event.eventDate && <span>· {new Date(event.eventDate).toLocaleDateString()}</span>}
+              <span className="ml-1"><StatusBadge status={event.status} /></span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" onClick={() => navigate(`/app/events/${id}/draws`)}>Draws</Button>
+            <Button variant="secondary" onClick={() => navigate(`/app/events/${id}/bouts`)}>Bouts</Button>
+            <Button variant="secondary" onClick={() => navigate(`/app/events/${id}/results`)}>Results</Button>
+            {event.registrationOpen ? (
+              <Button variant="secondary" onClick={() => toggleRegistration(false)}>Close Registration</Button>
+            ) : (
+              <Button onClick={() => toggleRegistration(true)}>Open Registration</Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -161,6 +230,54 @@ export default function EventDetail() {
               </div>
             </div>
           </Card>
+
+          <Card className="p-6 lg:col-span-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-semibold">Payment Account & Promoter Contact</h3>
+                {event.requirePayment ? (
+                  <StatusBadge status={event.paymentAccount?.accountNumber ? 'approved' : 'pending'} />
+                ) : (
+                  <Badge tone="slate">No fee required</Badge>
+                )}
+              </div>
+              <Button size="sm" variant="secondary" onClick={openSetup}>Edit</Button>
+            </div>
+            {event.requirePayment ? (
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Bank / M-Pesa Account</p>
+                  <dl className="mt-2 space-y-1.5 text-sm">
+                    <div className="flex justify-between"><dt className="text-slate-500">Bank</dt><dd className="font-medium text-slate-900">{event.paymentAccount?.bankName || '—'}</dd></div>
+                    <div className="flex justify-between"><dt className="text-slate-500">Account Name</dt><dd className="font-medium text-slate-900">{event.paymentAccount?.accountName || '—'}</dd></div>
+                    <div className="flex justify-between"><dt className="text-slate-500">Account No.</dt><dd className="font-medium text-slate-900">{event.paymentAccount?.accountNumber || '—'}</dd></div>
+                    {event.paymentAccount?.acceptedMethods?.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-2">{[...event.paymentAccount.acceptedMethods].map((m) => <Badge key={m} tone="blue">{m}</Badge>)}</div>
+                    )}
+                  </dl>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Promoter Contact</p>
+                  <dl className="mt-2 space-y-1.5 text-sm">
+                    <div className="flex justify-between"><dt className="text-slate-500">Name</dt><dd className="font-medium text-slate-900">{event.promoterContact?.name || '—'}</dd></div>
+                    <div className="flex justify-between"><dt className="text-slate-500">Phone</dt><dd className="font-medium text-slate-900">{event.promoterContact?.phone || '—'}</dd></div>
+                    <div className="flex justify-between"><dt className="text-slate-500">Email</dt><dd className="font-medium text-brand-700">{event.promoterContact?.email || '—'}</dd></div>
+                  </dl>
+                </div>
+                {event.paymentAccount?.paymentInstructions && (
+                  <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 sm:col-span-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Payment Instructions</p>
+                    <p className="mt-1 text-sm text-blue-900">{event.paymentAccount.paymentInstructions}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-slate-500">
+                This event does not require a registration fee, so no payment account is shown to clubs.
+              </p>
+            )}
+          </Card>
+
           {event.rules && (
             <Card className="p-6 lg:col-span-2">
               <h3 className="mb-2 text-base font-semibold">Rules</h3>
@@ -314,6 +431,61 @@ export default function EventDetail() {
         </p>
         <div className="mt-4">
           <Textarea label="Feedback (optional)" value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={3} placeholder="Optional note to the club" />
+        </div>
+      </Modal>
+
+      <Modal
+        open={setupOpen}
+        onClose={() => setSetupOpen(false)}
+        title="Payment Account & Promoter Contact"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setSetupOpen(false)}>Cancel</Button>
+            <Button onClick={saveSetup} disabled={busy}>{busy ? <Spinner className="h-4 w-4 border-white" /> : 'Save Changes'}</Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <p className="mb-2 text-sm font-semibold text-slate-900">Bank / Mobile Money Account</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input label="Bank Name" value={setup.bankName} onChange={(e) => setSetup({ ...setup, bankName: e.target.value })} placeholder="e.g. Equity Bank" />
+              <Input label="Account Name" value={setup.accountName} onChange={(e) => setSetup({ ...setup, accountName: e.target.value })} placeholder="Account holder" />
+              <Input label="Account Number" value={setup.accountNumber} onChange={(e) => setSetup({ ...setup, accountNumber: e.target.value })} placeholder="Account / M-Pesa no." />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Accepted Payment Methods</label>
+            <div className="flex gap-2">
+              <input
+                value={methodText}
+                onChange={(e) => setMethodText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addMethod() } }}
+                placeholder="e.g. M-Pesa, Bank Transfer"
+                className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+              />
+              <Button type="button" variant="secondary" onClick={addMethod}>Add</Button>
+            </div>
+            {setup.acceptedMethods.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {setup.acceptedMethods.map((m) => (
+                  <span key={m} className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-800">
+                    {m}
+                    <button type="button" onClick={() => setSetup({ ...setup, acceptedMethods: setup.acceptedMethods.filter((x) => x !== m) })} className="text-blue-400 hover:text-blue-900">×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          <Textarea label="Payment Instructions" value={setup.paymentInstructions} onChange={(e) => setSetup({ ...setup, paymentInstructions: e.target.value })} rows={2} placeholder="e.g. Use the boxer's name as the payment reference" />
+          <div className="border-t border-slate-200 pt-4">
+            <p className="mb-2 text-sm font-semibold text-slate-900">Promoter Contact (for payment confirmation)</p>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Input label="Name" value={setup.contactName} onChange={(e) => setSetup({ ...setup, contactName: e.target.value })} placeholder="Full name" />
+              <Input label="Phone / WhatsApp" value={setup.contactPhone} onChange={(e) => setSetup({ ...setup, contactPhone: e.target.value })} placeholder="+254 7XX XXX XXX" />
+              <Input label="Email" value={setup.contactEmail} onChange={(e) => setSetup({ ...setup, contactEmail: e.target.value })} placeholder="promoter@example.com" />
+            </div>
+          </div>
         </div>
       </Modal>
     </div>

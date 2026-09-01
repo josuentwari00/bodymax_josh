@@ -53,6 +53,7 @@ export default function EventCreate() {
   const [saving, setSaving] = useState(false)
   const [weightCategories, setWeightCategories] = useState([])
   const [ageCategories, setAgeCategories] = useState([])
+  const [acceptedMethods, setAcceptedMethods] = useState([])
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -70,6 +71,13 @@ export default function EventCreate() {
     requirePayment: false,
     requireWeighIn: true,
     public: false,
+    bankName: '',
+    accountName: '',
+    accountNumber: '',
+    paymentInstructions: '',
+    contactName: '',
+    contactPhone: '',
+    contactEmail: '',
   })
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
@@ -99,6 +107,18 @@ export default function EventCreate() {
           type: form.requirePayment ? form.feeType : 'none',
           amount: Number(form.feeAmount) || 0,
           currency: form.currency,
+        },
+        paymentAccount: {
+          bankName: form.bankName,
+          accountName: form.accountName,
+          accountNumber: form.accountNumber,
+          paymentInstructions: form.paymentInstructions,
+          acceptedMethods,
+        },
+        promoterContact: {
+          name: form.contactName,
+          phone: form.contactPhone,
+          email: form.contactEmail,
         },
         createdBy: user.id,
       }
@@ -186,6 +206,39 @@ export default function EventCreate() {
               <input type="checkbox" checked={form.public} onChange={(e) => setForm({ ...form, public: e.target.checked })} className="h-4 w-4 rounded" />
               <span className="text-sm text-slate-700">Make event visible to the public</span>
             </label>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Payment Account & Contact"
+            subtitle="Where clubs should send registration fees, and who to reach for confirmation"
+          />
+          <CardBody className="space-y-4">
+            <div className="flex items-center gap-2 rounded-lg bg-blue-50 px-4 py-3 text-sm text-blue-800">
+              <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              These details are shown to clubs during registration so they know exactly where to pay.
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Input label="Bank Name" value={form.bankName} onChange={set('bankName')} placeholder="e.g. Equity Bank" />
+              <Input label="Account Name" value={form.accountName} onChange={set('accountName')} placeholder="Account holder" />
+              <Input label="Account Number" value={form.accountNumber} onChange={set('accountNumber')} placeholder="Account / M-Pesa no." />
+            </div>
+
+            <TagInput label="Accepted Payment Methods" placeholder="e.g. M-Pesa, Bank Transfer" values={acceptedMethods} setValues={setAcceptedMethods} />
+            <Textarea label="Payment Instructions" value={form.paymentInstructions} onChange={set('paymentInstructions')} rows={2} placeholder="e.g. Use the boxer name as the payment reference" />
+
+            <div className="border-t border-slate-200 pt-4">
+              <p className="mb-3 text-sm font-semibold text-slate-900">Promoter Contact (for payment confirmation)</p>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Input label="Contact Name" value={form.contactName} onChange={set('contactName')} placeholder="Full name" />
+                <Input label="Phone / WhatsApp" value={form.contactPhone} onChange={set('contactPhone')} placeholder="+254 7XX XXX XXX" />
+                <Input label="Email" value={form.contactEmail} onChange={set('contactEmail')} placeholder="promoter@example.com" />
+              </div>
+            </div>
           </CardBody>
         </Card>
 
