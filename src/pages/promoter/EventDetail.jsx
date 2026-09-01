@@ -92,6 +92,17 @@ export default function EventDetail() {
     }
   }
 
+  const changeStatus = async (status) => {
+    try {
+      const registrationOpen = status === 'open' || status === 'in_progress'
+      await api(`/events/update?id=${id}`, { method: 'PATCH', body: { status, registrationOpen } })
+      toast(`Event status set to ${status}`)
+      load()
+    } catch (err) {
+      toast(err.message, 'error')
+    }
+  }
+
   const openSetup = () => {
     setSetup({
       bankName: event.paymentAccount?.bankName || '',
@@ -173,6 +184,18 @@ export default function EventDetail() {
             <Button variant="secondary" onClick={() => navigate(`/app/events/${id}/draws`)}>Draws</Button>
             <Button variant="secondary" onClick={() => navigate(`/app/events/${id}/bouts`)}>Bouts</Button>
             <Button variant="secondary" onClick={() => navigate(`/app/events/${id}/results`)}>Results</Button>
+            <select
+              value={event.status}
+              onChange={(e) => changeStatus(e.target.value)}
+              className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white focus:border-white/40 focus:outline-none focus:ring-1 focus:ring-white/40 [&>option]:text-slate-900"
+            >
+              <option value="draft">Draft</option>
+              <option value="open">Open</option>
+              <option value="closed">Closed</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="archived">Archived</option>
+            </select>
             {event.registrationOpen ? (
               <Button variant="secondary" onClick={() => toggleRegistration(false)}>Close Registration</Button>
             ) : (

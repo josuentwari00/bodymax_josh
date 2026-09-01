@@ -36,6 +36,9 @@ export default async (event) => {
       ...body,
       slug,
       createdBy: body.createdBy,
+      status: body.status || 'open',
+      registrationOpen: body.registrationOpen !== undefined ? body.registrationOpen : true,
+      public: body.public !== undefined ? body.public : true,
     }
     delete eventData.createdBy
 
