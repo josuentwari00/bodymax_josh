@@ -142,7 +142,7 @@ export default function ClubRegister() {
                           {b.weightCategory && `${b.weightCategory} · `}{b.ageCategory || '—'}
                         </p>
                       </div>
-                      {already && <span className="text-xs font-medium text-green-600">Already registered</span>}
+                      {already && <span className="text-xs font-medium text-brand-700">Already registered</span>}
                     </li>
                   )
                 })}
@@ -167,7 +167,7 @@ export default function ClubRegister() {
                       Category: {r.category?.weight || '—'}
                       {r.payment?.status !== 'not_required' && ` · Payment: ${r.payment?.status}`}
                     </p>
-                    {r.promoterFeedback && <p className="mt-1 text-xs text-red-600">Feedback: {r.promoterFeedback}</p>}
+                    {r.promoterFeedback && <p className="mt-1 text-xs text-slate-800">Feedback: {r.promoterFeedback}</p>}
                   </div>
                   <div className="flex items-center gap-2">
                     <StatusBadge status={r.status} />

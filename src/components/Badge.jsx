@@ -1,12 +1,11 @@
 import { cn } from '../utils/cn'
 
 const tones = {
-  green: 'bg-green-100 text-green-800',
-  red: 'bg-red-100 text-red-800',
-  yellow: 'bg-yellow-100 text-yellow-800',
   blue: 'bg-blue-100 text-blue-800',
+  dark: 'bg-slate-900 text-white',
   slate: 'bg-slate-100 text-slate-700',
-  purple: 'bg-purple-100 text-purple-800',
+  light: 'bg-blue-50 text-blue-700',
+  outline: 'bg-white text-slate-700 border border-slate-300',
 }
 
 export function Badge({ children, tone = 'slate', className }) {
@@ -27,36 +26,36 @@ export function StatusBadge({ status }) {
   const map = {
     // Registration statuses
     registered: { label: 'Registered', tone: 'blue' },
-    pending_approval: { label: 'Pending Approval', tone: 'yellow' },
-    needs_correction: { label: 'Needs Correction', tone: 'red' },
-    approved: { label: 'Approved', tone: 'green' },
-    payment_pending: { label: 'Payment Pending', tone: 'yellow' },
-    payment_confirmed: { label: 'Payment Confirmed', tone: 'green' },
-    awaiting_weighin: { label: 'Awaiting Weigh-In', tone: 'blue' },
+    pending_approval: { label: 'Pending Approval', tone: 'light' },
+    needs_correction: { label: 'Needs Correction', tone: 'dark' },
+    approved: { label: 'Approved', tone: 'blue' },
+    payment_pending: { label: 'Payment Pending', tone: 'light' },
+    payment_confirmed: { label: 'Payment Confirmed', tone: 'blue' },
+    awaiting_weighin: { label: 'Awaiting Weigh-In', tone: 'light' },
     weighed: { label: 'Weighed', tone: 'blue' },
-    eligible: { label: 'Eligible', tone: 'green' },
-    not_eligible: { label: 'Not Eligible', tone: 'red' },
+    eligible: { label: 'Eligible', tone: 'blue' },
+    not_eligible: { label: 'Not Eligible', tone: 'dark' },
     withdrawn: { label: 'Withdrawn', tone: 'slate' },
-    eliminated: { label: 'Eliminated', tone: 'red' },
-    completed: { label: 'Completed', tone: 'purple' },
+    eliminated: { label: 'Eliminated', tone: 'dark' },
+    completed: { label: 'Completed', tone: 'outline' },
     // Payment statuses
     not_required: { label: 'Not Required', tone: 'slate' },
-    pending: { label: 'Pending', tone: 'yellow' },
+    pending: { label: 'Pending', tone: 'light' },
     submitted: { label: 'Submitted', tone: 'blue' },
-    confirmed: { label: 'Confirmed', tone: 'green' },
-    rejected: { label: 'Rejected', tone: 'red' },
+    confirmed: { label: 'Confirmed', tone: 'blue' },
+    rejected: { label: 'Rejected', tone: 'dark' },
     // Event statuses
     draft: { label: 'Draft', tone: 'slate' },
-    open: { label: 'Open', tone: 'green' },
-    closed: { label: 'Closed', tone: 'red' },
-    in_progress: { label: 'In Progress', tone: 'blue' },
-    completed_event: { label: 'Completed', tone: 'purple' },
+    open: { label: 'Open', tone: 'blue' },
+    closed: { label: 'Closed', tone: 'dark' },
+    in_progress: { label: 'In Progress', tone: 'light' },
+    completed_event: { label: 'Completed', tone: 'outline' },
     archived: { label: 'Archived', tone: 'slate' },
     // Weigh-in statuses
-    not_weighed: { label: 'Not Weighed', tone: 'yellow' },
-    successful: { label: 'Successful', tone: 'green' },
-    outside_category: { label: 'Outside Category', tone: 'red' },
-    requires_review: { label: 'Requires Review', tone: 'yellow' },
+    not_weighed: { label: 'Not Weighed', tone: 'light' },
+    successful: { label: 'Successful', tone: 'blue' },
+    outside_category: { label: 'Outside Category', tone: 'dark' },
+    requires_review: { label: 'Requires Review', tone: 'light' },
   }
   const config = map[status] || { label: status, tone: 'slate' }
   return <Badge tone={config.tone}>{config.label}</Badge>

@@ -54,7 +54,7 @@ export default function Login() {
               required
             />
           </div>
-          {error && <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+          {error && <p className="mt-3 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-900">{error}</p>}
           <Button type="submit" className="mt-6 w-full" disabled={loading}>
             {loading ? <Spinner className="h-4 w-4 border-white" /> : 'Sign in'}
           </Button>

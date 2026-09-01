@@ -93,7 +93,7 @@ export default function Results() {
                           {b.scheduledDate && <span>· {new Date(b.scheduledDate).toLocaleDateString()}</span>}
                         </div>
                         {b.status === 'completed' && (
-                          <p className="mt-1 text-sm text-green-700">
+                          <p className="mt-1 text-sm text-brand-700">
                             Winner: {b.result?.method === 'Walkover' ? 'Walkover' : b.winnerId?.boxerId?.fullName} — {b.result?.method}
                           </p>
                         )}

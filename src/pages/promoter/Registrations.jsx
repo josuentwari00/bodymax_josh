@@ -82,7 +82,7 @@ export default function Registrations() {
                       {r.clubId?.name}
                       {r.eventId?.name && ` · ${r.eventId.name}`}
                     </p>
-                    {r.promoterFeedback && <p className="mt-1 text-xs text-red-600">Feedback: {r.promoterFeedback}</p>}
+                    {r.promoterFeedback && <p className="mt-1 text-xs text-slate-800">Feedback: {r.promoterFeedback}</p>}
                     {r.payment?.status === 'submitted' && r.payment.reference && (
                       <p className="mt-1 text-xs text-blue-600">Payment: {r.payment.amount} · Ref {r.payment.reference}</p>
                     )}

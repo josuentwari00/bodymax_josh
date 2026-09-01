@@ -7,8 +7,8 @@ import { Loading } from '../../components/Loading.jsx'
 function Stat({ label, value, to, tone }) {
   const accents = {
     brand: 'text-brand-700',
-    green: 'text-green-700',
-    red: 'text-red-700',
+    green: 'text-brand-700',
+    red: 'text-slate-900',
     blue: 'text-blue-700',
   }
   return (
@@ -78,7 +78,7 @@ export default function PromoterDashboard() {
                       </div>
                       <span
                         className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          ev.registrationOpen ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-600'
+                          ev.registrationOpen ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600'
                         }`}
                       >
                         {ev.registrationOpen ? 'Open' : ev.status}

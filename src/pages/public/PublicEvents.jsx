@@ -45,7 +45,7 @@ export default function PublicEvents() {
                   {ev.eventDate ? new Date(ev.eventDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Date TBD'}
                 </p>
                 {ev.status === 'completed' && (
-                  <span className="mt-3 inline-block rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">Completed</span>
+                  <span className="mt-3 inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">Completed</span>
                 )}
               </Link>
             ))}

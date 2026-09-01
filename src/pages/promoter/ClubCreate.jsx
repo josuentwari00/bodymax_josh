@@ -71,7 +71,7 @@ export default function ClubCreate() {
           </CardBody>
         </Card>
 
-        {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+        {error && <p className="rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-900">{error}</p>}
 
         <div className="flex items-center justify-between">
           <Button type="button" variant="ghost" onClick={() => navigate('/app/clubs')}>Cancel</Button>

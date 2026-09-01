@@ -35,7 +35,7 @@ function TagInput({ label, placeholder, values, setValues }) {
           {values.map((v) => (
             <span key={v} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700">
               {v}
-              <button type="button" onClick={() => setValues(values.filter((x) => x !== v))} className="text-slate-400 hover:text-red-600">×</button>
+              <button type="button" onClick={() => setValues(values.filter((x) => x !== v))} className="text-slate-400 hover:text-slate-900">×</button>
             </span>
           ))}
         </div>
@@ -189,7 +189,7 @@ export default function EventCreate() {
           </CardBody>
         </Card>
 
-        {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+        {error && <p className="rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-900">{error}</p>}
 
         <div className="flex items-center justify-between">
           <Button type="button" variant="ghost" onClick={() => navigate('/app/events')}>Cancel</Button>

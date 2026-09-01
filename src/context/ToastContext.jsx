@@ -25,7 +25,7 @@ export function ToastProvider({ children }) {
             key={t.id}
             className={cn(
               'min-w-[260px] max-w-sm rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg',
-              t.type === 'error' ? 'bg-red-600' : 'bg-slate-900'
+              t.type === 'error' ? 'bg-slate-900' : 'bg-brand-600'
             )}
           >
             {t.message}
