@@ -2,19 +2,69 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../../utils/api.js'
 import { Card, CardHeader, CardBody } from '../../components/Card.jsx'
-import { Loading, Empty } from '../../components/Loading.jsx'
+import { Loading, Empty, Spinner } from '../../components/Loading.jsx'
+import { Button } from '../../components/Button.jsx'
+import { Modal } from '../../components/Modal.jsx'
+import { Input } from '../../components/Field.jsx'
+import { useToast } from '../../context/ToastContext.jsx'
 
 export default function ClubDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { toast } = useToast()
   const [club, setClub] = useState(null)
   const [boxers, setBoxers] = useState(null)
   const [registrations, setRegistrations] = useState(null)
+  const [editOpen, setEditOpen] = useState(false)
+  const [form, setForm] = useState({ name: '', contactName: '', contactEmail: '', contactPhone: '', address: '' })
+  const [busy, setBusy] = useState(false)
 
-  useEffect(() => {
+  const load = () => {
     api(`/clubs?clubId=${id}&populate=true`).then((d) => { setClub(d.club); setBoxers(d.boxers) }).catch(() => {})
     api(`/registrations?clubId=${id}`).then((d) => setRegistrations(d.registrations)).catch(() => {})
-  }, [id])
+  }
+
+  useEffect(load, [id])
+
+  const openEdit = () => {
+    setForm({
+      name: club.name || '',
+      contactName: club.contactName || '',
+      contactEmail: club.contactEmail || '',
+      contactPhone: club.contactPhone || '',
+      address: club.address || '',
+    })
+    setEditOpen(true)
+  }
+
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
+
+  const saveEdit = async () => {
+    setBusy(true)
+    try {
+      await api(`/clubs?clubId=${id}`, { method: 'PUT', body: form })
+      toast('Club updated')
+      setEditOpen(false)
+      load()
+    } catch (err) {
+      toast(err.message, 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Delete club "${club.name}" and its login account? This cannot be undone.`)) return
+    setBusy(true)
+    try {
+      await api(`/clubs?clubId=${id}`, { method: 'DELETE' })
+      toast('Club deleted')
+      navigate('/app/clubs')
+    } catch (err) {
+      toast(err.message, 'error')
+      setBusy(false)
+    }
+  }
 
   if (!club || !boxers || !registrations) return <Loading />
 
@@ -22,8 +72,16 @@ export default function ClubDetail() {
     <div>
       <div className="mb-6">
         <button onClick={() => navigate('/app/clubs')} className="mb-1 text-sm text-brand-600 hover:underline">← Clubs</button>
-        <h1 className="text-2xl font-bold text-slate-900">{club.name}</h1>
-        <p className="text-sm text-slate-500">{club.contactName || 'Club'}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">{club.name}</h1>
+            <p className="text-sm text-slate-500">{club.contactName || 'Club'}</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={openEdit}>Edit</Button>
+            <Button variant="danger" onClick={handleDelete}>Delete Club</Button>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -68,6 +126,28 @@ export default function ClubDetail() {
           </CardBody>
         </Card>
       </div>
+
+      <Modal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        title="Edit Club"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button onClick={saveEdit} disabled={busy}>{busy ? <Spinner className="h-4 w-4 border-white" /> : 'Save'}</Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Input label="Club Name" value={form.name} onChange={set('name')} required />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input label="Contact Person" value={form.contactName} onChange={set('contactName')} />
+            <Input label="Contact Phone" value={form.contactPhone} onChange={set('contactPhone')} />
+          </div>
+          <Input label="Contact Email" type="email" value={form.contactEmail} onChange={set('contactEmail')} />
+          <Input label="Address" value={form.address} onChange={set('address')} />
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -24,6 +24,7 @@ import Registrations from './pages/promoter/Registrations.jsx'
 import ClubDashboard from './pages/club/Dashboard.jsx'
 import ClubBoxers from './pages/club/Boxers.jsx'
 import ClubRegister from './pages/club/Register.jsx'
+import Settings from './pages/Settings.jsx'
 
 function ProtectedRoute({ children, roles }) {
   const { user, loading } = useAuth()
@@ -74,6 +75,8 @@ export default function App() {
 
         <Route path="club/boxers" element={<ProtectedRoute roles={['club']}><ClubBoxers /></ProtectedRoute>} />
         <Route path="club/register" element={<ProtectedRoute roles={['club']}><ClubRegister /></ProtectedRoute>} />
+
+        <Route path="settings" element={<Settings />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

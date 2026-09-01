@@ -5,6 +5,7 @@ const BASE_URL = '/.netlify/functions'
 const PATH_MAP = {
   '/auth/login': '/auth-login',
   '/auth/me': '/auth-me',
+  '/auth/update': '/auth-update',
   '/users/create': '/users-create',
   '/events/create': '/events-create',
   '/events/update': '/events-update',

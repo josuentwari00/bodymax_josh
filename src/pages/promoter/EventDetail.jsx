@@ -8,6 +8,7 @@ import { Loading, Empty, Spinner } from '../../components/Loading.jsx'
 import { StatusBadge, Badge } from '../../components/Badge.jsx'
 import { Modal } from '../../components/Modal.jsx'
 import { Input, Textarea, Select } from '../../components/Field.jsx'
+import TagInput from '../../components/TagInput.jsx'
 
 export default function EventDetail() {
   const { id } = useParams()
@@ -36,6 +37,28 @@ export default function EventDetail() {
     contactEmail: '',
   })
   const [methodText, setMethodText] = useState('')
+  const [editOpen, setEditOpen] = useState(false)
+  const [editForm, setEditForm] = useState({
+    name: '',
+    description: '',
+    venue: '',
+    location: '',
+    eventDate: '',
+    registrationOpens: '',
+    registrationDeadline: '',
+    weighInDate: '',
+    rules: '',
+    registrationRequirements: '',
+    feeType: 'none',
+    feeAmount: '',
+    currency: '',
+    requirePayment: false,
+    requireWeighIn: true,
+    public: false,
+  })
+  const [editWeightCategories, setEditWeightCategories] = useState([])
+  const [editAgeCategories, setEditAgeCategories] = useState([])
+  const [editMethodOptions, setEditMethodOptions] = useState([])
 
   const load = () => {
     api(`/events?id=${id}`).then((d) => setEvent(d.event)).catch(() => {})
@@ -156,6 +179,86 @@ export default function EventDetail() {
     }
   }
 
+  const openEdit = () => {
+    setEditForm({
+      name: event.name || '',
+      description: event.description || '',
+      venue: event.venue || '',
+      location: event.location || '',
+      eventDate: event.eventDate ? String(event.eventDate).slice(0, 10) : '',
+      registrationOpens: event.registrationOpens ? String(event.registrationOpens).slice(0, 10) : '',
+      registrationDeadline: event.registrationDeadline ? String(event.registrationDeadline).slice(0, 10) : '',
+      weighInDate: event.weighInDate ? String(event.weighInDate).slice(0, 10) : '',
+      rules: event.rules || '',
+      registrationRequirements: event.registrationRequirements || '',
+      feeType: event.feeStructure?.type || 'none',
+      feeAmount: event.feeStructure?.amount ?? '',
+      currency: event.feeStructure?.currency || '',
+      requirePayment: event.requirePayment || false,
+      requireWeighIn: event.requireWeighIn ?? true,
+      public: event.public || false,
+    })
+    setEditWeightCategories([...(event.weightCategories || [])])
+    setEditAgeCategories([...(event.ageCategories || [])])
+    setEditMethodOptions([...(event.paymentAccount?.acceptedMethods || [])])
+    setEditOpen(true)
+  }
+
+  const saveEdit = async () => {
+    setBusy(true)
+    try {
+      await api(`/events/update?id=${id}`, {
+        method: 'PATCH',
+        body: {
+          name: editForm.name,
+          description: editForm.description,
+          venue: editForm.venue,
+          location: editForm.location,
+          eventDate: editForm.eventDate ? new Date(editForm.eventDate) : null,
+          registrationOpens: editForm.registrationOpens ? new Date(editForm.registrationOpens) : null,
+          registrationDeadline: editForm.registrationDeadline ? new Date(editForm.registrationDeadline) : null,
+          weighInDate: editForm.weighInDate ? new Date(editForm.weighInDate) : null,
+          rules: editForm.rules,
+          registrationRequirements: editForm.registrationRequirements,
+          weightCategories: editWeightCategories,
+          ageCategories: editAgeCategories,
+          requirePayment: editForm.requirePayment,
+          requireWeighIn: editForm.requireWeighIn,
+          public: editForm.public,
+          feeStructure: {
+            type: editForm.requirePayment ? editForm.feeType : 'none',
+            amount: Number(editForm.feeAmount) || 0,
+            currency: editForm.currency,
+          },
+          paymentAccount: {
+            ...(event.paymentAccount || {}),
+            acceptedMethods: editMethodOptions,
+          },
+        },
+      })
+      toast('Event details updated')
+      setEditOpen(false)
+      load()
+    } catch (err) {
+      toast(err.message, 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Delete event "${event.name}"? This cannot be undone.`)) return
+    setBusy(true)
+    try {
+      await api(`/events?id=${id}`, { method: 'DELETE' })
+      toast('Event deleted')
+      navigate('/app/events')
+    } catch (err) {
+      toast(err.message, 'error')
+      setBusy(false)
+    }
+  }
+
   if (!event) return <Loading />
   if (!registrations) return <Loading />
 
@@ -181,6 +284,7 @@ export default function EventDetail() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" onClick={openEdit}>Edit Details</Button>
             <Button variant="secondary" onClick={() => navigate(`/app/events/${id}/draws`)}>Draws</Button>
             <Button variant="secondary" onClick={() => navigate(`/app/events/${id}/bouts`)}>Bouts</Button>
             <Button variant="secondary" onClick={() => navigate(`/app/events/${id}/results`)}>Results</Button>
@@ -201,6 +305,7 @@ export default function EventDetail() {
             ) : (
               <Button onClick={() => toggleRegistration(true)}>Open Registration</Button>
             )}
+            <Button variant="danger" onClick={handleDelete}>Delete Event</Button>
           </div>
         </div>
       </div>
@@ -507,6 +612,66 @@ export default function EventDetail() {
               <Input label="Name" value={setup.contactName} onChange={(e) => setSetup({ ...setup, contactName: e.target.value })} placeholder="Full name" />
               <Input label="Phone / WhatsApp" value={setup.contactPhone} onChange={(e) => setSetup({ ...setup, contactPhone: e.target.value })} placeholder="+254 7XX XXX XXX" />
               <Input label="Email" value={setup.contactEmail} onChange={(e) => setSetup({ ...setup, contactEmail: e.target.value })} placeholder="promoter@example.com" />
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        title="Edit Event Details"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button onClick={saveEdit} disabled={busy}>{busy ? <Spinner className="h-4 w-4 border-white" /> : 'Save Changes'}</Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Input label="Event Name" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required />
+          <Textarea label="Description" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={2} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input label="Venue" value={editForm.venue} onChange={(e) => setEditForm({ ...editForm, venue: e.target.value })} />
+            <Input label="Location" value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Input label="Event Date" type="date" value={editForm.eventDate} onChange={(e) => setEditForm({ ...editForm, eventDate: e.target.value })} />
+            <Input label="Registration Opens" type="date" value={editForm.registrationOpens} onChange={(e) => setEditForm({ ...editForm, registrationOpens: e.target.value })} />
+            <Input label="Registration Deadline" type="date" value={editForm.registrationDeadline} onChange={(e) => setEditForm({ ...editForm, registrationDeadline: e.target.value })} />
+            <Input label="Weigh-In Date" type="date" value={editForm.weighInDate} onChange={(e) => setEditForm({ ...editForm, weighInDate: e.target.value })} />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TagInput label="Weight Categories" placeholder="e.g. 60kg" values={editWeightCategories} setValues={setEditWeightCategories} />
+            <TagInput label="Age Categories" placeholder="e.g. Junior" values={editAgeCategories} setValues={setEditAgeCategories} />
+          </div>
+          <Textarea label="Competition Rules" value={editForm.rules} onChange={(e) => setEditForm({ ...editForm, rules: e.target.value })} rows={2} />
+          <Textarea label="Registration Requirements" value={editForm.registrationRequirements} onChange={(e) => setEditForm({ ...editForm, registrationRequirements: e.target.value })} rows={2} />
+          <div className="border-t border-slate-200 pt-4">
+            <p className="mb-2 text-sm font-semibold text-slate-900">Fees & Settings</p>
+            <div className="space-y-3">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={editForm.requirePayment} onChange={(e) => setEditForm({ ...editForm, requirePayment: e.target.checked })} className="h-4 w-4 rounded" />
+                <span className="text-sm text-slate-700">Require registration payment</span>
+              </label>
+              {editForm.requirePayment && (
+                <div className="grid gap-4 rounded-lg bg-slate-50 p-4 sm:grid-cols-3">
+                  <Select label="Fee Type" value={editForm.feeType} onChange={(e) => setEditForm({ ...editForm, feeType: e.target.value })}>
+                    <option value="per_boxer">Per Boxer</option>
+                    <option value="per_club">Per Club</option>
+                  </Select>
+                  <Input label="Amount" type="number" value={editForm.feeAmount} onChange={(e) => setEditForm({ ...editForm, feeAmount: e.target.value })} placeholder="0.00" />
+                  <Input label="Currency" value={editForm.currency} onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })} placeholder="e.g. $, GBP" />
+                </div>
+              )}
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={editForm.requireWeighIn} onChange={(e) => setEditForm({ ...editForm, requireWeighIn: e.target.checked })} className="h-4 w-4 rounded" />
+                <span className="text-sm text-slate-700">Require weigh-in before competition</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={editForm.public} onChange={(e) => setEditForm({ ...editForm, public: e.target.checked })} className="h-4 w-4 rounded" />
+                <span className="text-sm text-slate-700">Make event visible to the public</span>
+              </label>
             </div>
           </div>
         </div>
