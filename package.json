@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "seed": "node scripts/seed-promoter.mjs",
+    "seed:clubs": "node scripts/seed-clubs-boxers.mjs",
     "start:functions": "netlify functions:serve"
   },
   "devDependencies": {
