@@ -86,6 +86,7 @@ export default function ClubRegister() {
   const [registrations, setRegistrations] = useState(null)
   const [selEvent, setSelEvent] = useState('')
   const [selectedBoxers, setSelectedBoxers] = useState([])
+  const [boxerCats, setBoxerCats] = useState({})
   const [payModal, setPayModal] = useState(null)
   const [payForm, setPayForm] = useState({ amount: '', method: '', reference: '', paidAt: '' })
   const [busy, setBusy] = useState(false)
@@ -113,24 +114,60 @@ export default function ClubRegister() {
   const perBoxerTotal = feePerBoxer * selectedBoxers.length
   const totalFee = feeType === 'per_club' ? (selectedBoxers.length > 0 ? feeAmount : 0) : perBoxerTotal
 
+  const eventWeightCats = activeEvent?.weightCategories || []
+  const eventAgeCats = activeEvent?.ageCategories || []
+  const needsWeightCat = eventWeightCats.length > 0
+  const needsAgeCat = eventAgeCats.length > 0
+
   const toggleSelect = (bid) => {
     if (selectedBoxers.includes(bid)) {
       setSelectedBoxers(selectedBoxers.filter((x) => x !== bid))
     } else {
+      const b = boxers.find((x) => x._id === bid)
       setSelectedBoxers([...selectedBoxers, bid])
+      setBoxerCats((prev) => ({
+        ...prev,
+        [bid]: {
+          weight: eventWeightCats.includes(b?.weightCategory) ? b.weightCategory : '',
+          age: eventAgeCats.includes(b?.ageCategory) ? b.ageCategory : '',
+          gender: b?.gender || 'M',
+        },
+      }))
     }
   }
 
+  const setCat = (bid, key) => (e) => setBoxerCats((prev) => ({ ...prev, [bid]: { ...prev[bid], [key]: e.target.value } }))
+
   const submitRegistration = async () => {
     if (!selEvent || selectedBoxers.length === 0) return
+    for (const bid of selectedBoxers) {
+      const cat = boxerCats[bid] || {}
+      if (needsWeightCat && !cat.weight) {
+        toast(`Choose a weight category for every selected boxer`, 'error')
+        return
+      }
+      if (needsAgeCat && !cat.age) {
+        toast(`Choose an age category for every selected boxer`, 'error')
+        return
+      }
+    }
     setBusy(true)
     try {
       for (const bid of selectedBoxers) {
-        await api('/registrations', { method: 'POST', body: { eventId: selEvent, boxerId: bid } })
+        const cat = boxerCats[bid] || {}
+        await api('/registrations', {
+          method: 'POST',
+          body: {
+            eventId: selEvent,
+            boxerId: bid,
+            category: { weight: cat.weight || '', age: cat.age || '', gender: cat.gender || 'M' },
+          },
+        })
       }
       setJustRegistered(activeEvent)
       toast(`${selectedBoxers.length} boxer(s) registered`)
       setSelectedBoxers([])
+      setBoxerCats({})
       load()
     } catch (err) {
       toast(err.message, 'error')
@@ -179,7 +216,7 @@ export default function ClubRegister() {
         <div className="mt-4">
           <select
             value={selEvent}
-            onChange={(e) => { setSelEvent(e.target.value); setSelectedBoxers([]); setJustRegistered(null) }}
+            onChange={(e) => { setSelEvent(e.target.value); setSelectedBoxers([]); setBoxerCats({}); setJustRegistered(null) }}
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
           >
             <option value="">Choose an event with open registration</option>
@@ -266,27 +303,63 @@ export default function ClubRegister() {
                 const already = alreadyRegisteredBoxerIds.has(b._id)
                 const checked = selectedBoxers.includes(b._id)
                 return (
-                  <li key={b._id} className="flex items-center gap-3 py-3">
-                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${b.gender === 'F' ? 'bg-blue-100 text-brand-800' : 'bg-slate-900 text-white'}`}>
-                      {b.fullName?.split(' ').map((w) => w[0]).slice(0, 2).join('') || '?'}
+                  <li key={b._id} className="py-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${b.gender === 'F' ? 'bg-blue-100 text-brand-800' : 'bg-slate-900 text-white'}`}>
+                        {b.fullName?.split(' ').map((w) => w[0]).slice(0, 2).join('') || '?'}
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={already}
+                        onChange={() => toggleSelect(b._id)}
+                        className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium text-slate-900">{b.fullName}</p>
+                        <p className="text-sm text-slate-500">
+                          <Badge tone={b.gender === 'F' ? 'blue' : 'dark'}>{b.gender === 'F' ? 'Female' : 'Male'}</Badge>
+                          {b.weightCategory && <span className="ml-1.5">{b.weightCategory}</span>}
+                          {b.registeredWeightKg && <span className="text-slate-400"> · {b.registeredWeightKg}kg</span>}
+                          {b.ageCategory && <span className="text-slate-400"> · {b.ageCategory}</span>}
+                        </p>
+                      </div>
+                      {already && <span className="text-xs font-medium text-brand-700">Already registered</span>}
                     </div>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      disabled={already}
-                      onChange={() => toggleSelect(b._id)}
-                      className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                    />
-                    <div className="flex-1">
-                      <p className="font-medium text-slate-900">{b.fullName}</p>
-                      <p className="text-sm text-slate-500">
-                        <Badge tone={b.gender === 'F' ? 'blue' : 'dark'}>{b.gender === 'F' ? 'Female' : 'Male'}</Badge>
-                        {b.weightCategory && <span className="ml-1.5">{b.weightCategory}</span>}
-                        {b.registeredWeightKg && <span className="text-slate-400"> · {b.registeredWeightKg}kg</span>}
-                        {b.ageCategory && <span className="text-slate-400"> · {b.ageCategory}</span>}
-                      </p>
-                    </div>
-                    {already && <span className="text-xs font-medium text-brand-700">Already registered</span>}
+                    {checked && (needsWeightCat || needsAgeCat) && (
+                      <div className="mt-3 ml-[52px] grid gap-3 rounded-lg bg-slate-50 p-3 sm:grid-cols-2">
+                        {needsWeightCat && (
+                          <div>
+                            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Weight Category *</label>
+                            <select
+                              value={boxerCats[b._id]?.weight || ''}
+                              onChange={setCat(b._id, 'weight')}
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-500 focus:outline-none"
+                            >
+                              <option value="">Select weight category</option>
+                              {eventWeightCats.map((c) => (
+                                <option key={c} value={c}>{c}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        {needsAgeCat && (
+                          <div>
+                            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Age Category *</label>
+                            <select
+                              value={boxerCats[b._id]?.age || ''}
+                              onChange={setCat(b._id, 'age')}
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-500 focus:outline-none"
+                            >
+                              <option value="">Select age category</option>
+                              {eventAgeCats.map((c) => (
+                                <option key={c} value={c}>{c}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </li>
                 )
               })}

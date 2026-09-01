@@ -80,6 +80,23 @@ export default async (event) => {
         return errorResponse({ message: 'This boxer is already registered for this event', status: 400 })
       }
 
+      const cat = category || {}
+      const eventWeights = ev.weightCategories || []
+      const eventAges = ev.ageCategories || []
+
+      if (eventWeights.length && !eventWeights.includes(cat.weight)) {
+        return errorResponse({ message: 'Select a valid weight category for this event', status: 400 })
+      }
+      if (eventAges.length && !eventAges.includes(cat.age)) {
+        return errorResponse({ message: 'Select a valid age category for this event', status: 400 })
+      }
+
+      const gender = cat.gender || boxer.gender || 'M'
+      const allowedGenders = ev.genderCategories?.length ? ev.genderCategories : ['M', 'F', 'Mixed']
+      if (!allowedGenders.includes(gender)) {
+        return errorResponse({ message: 'Select a valid gender category for this event', status: 400 })
+      }
+
       const feeAmount = ev.feeStructure?.type === 'per_boxer' ? ev.feeStructure.amount || 0 : 0
       const requirePayment = ev.requirePayment && ev.feeStructure?.type !== 'none'
 
@@ -87,7 +104,11 @@ export default async (event) => {
         eventId: evId,
         clubId: user.clubId,
         boxerId,
-        category,
+        category: {
+          weight: cat.weight || '',
+          age: cat.age || '',
+          gender,
+        },
         status: 'pending_approval',
         payment: {
           status: requirePayment ? 'pending' : 'not_required',
