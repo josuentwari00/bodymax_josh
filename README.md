@@ -130,10 +130,12 @@ The Vite dev server proxies `/.netlify/functions/*` to `http://localhost:8888` (
 1. Push this repository to GitHub.
 2. In Netlify, **Add new site → Import from Git**.
 3. Set the build command to `npm run build` and publish directory to `dist` (already in `netlify.toml`).
-4. Add environment variables in Netlify **Site settings → Environment variables**:
-   - `MONGODB_URI`
-   - `JWT_SECRET`
-5. Deploy. Serverless functions are auto-detected from `netlify/functions`.
+4. **Add environment variables** in Netlify → **Site settings → Environment variables** (until these are set, every function returns a 502):
+   - `MONGODB_URI` — your MongoDB Atlas connection string, e.g. `mongodb+srv://<user>:<password>@<cluster>.mongodb.net/bodymax?retryWrites=true&w=majority`
+   - `JWT_SECRET` — a long random string (e.g. `openssl rand -hex 32`)
+5. Redeploy. Serverless functions are auto-detected from `netlify/functions`.
+
+> **Troubleshooting a 502:** A `502 Bad Gateway` on function routes almost always means `MONGODB_URI` is missing/misconfigured in Netlify. Check it's set, then redeploy. View per-function errors under **Site settings → Functions → (function) → Logs**.
 
 ## Status Lifecycle (Registration)
 
