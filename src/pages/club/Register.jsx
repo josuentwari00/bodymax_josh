@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { api } from '../../utils/api.js'
-import { useAuth } from '../../context/AuthContext.jsx'
 import { useToast } from '../../context/ToastContext.jsx'
 import { Button } from '../../components/Button.jsx'
 import { Card } from '../../components/Card.jsx'
@@ -8,20 +7,7 @@ import { Loading, Empty, Spinner } from '../../components/Loading.jsx'
 import { StatusBadge, Badge } from '../../components/Badge.jsx'
 import { Modal } from '../../components/Modal.jsx'
 import { Input } from '../../components/Field.jsx'
-
-function StepBadge({ n, title, subtitle }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-600 to-blue-900 text-sm font-bold text-white shadow-md shadow-blue-200">
-        {n}
-      </div>
-      <div>
-        <p className="font-semibold text-slate-900">{title}</p>
-        <p className="text-xs text-slate-500">{subtitle}</p>
-      </div>
-    </div>
-  )
-}
+import { cn } from '../../utils/cn.js'
 
 function PayInfo({ event }) {
   const acc = event.paymentAccount || {}
@@ -78,19 +64,74 @@ function ContactCard({ contact }) {
   )
 }
 
+const chevronRight = (
+  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+  </svg>
+)
+const chevronLeft = (
+  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+  </svg>
+)
+const checkIcon = (
+  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+  </svg>
+)
+
+function Stepper({ step }) {
+  const steps = [
+    { n: 1, label: 'Event' },
+    { n: 2, label: 'Boxers' },
+    { n: 3, label: 'Confirm' },
+  ]
+  return (
+    <div className="flex items-center">
+      {steps.map((s, i) => (
+        <Fragment key={s.n}>
+          {i > 0 && (
+            <div className={cn('mx-1 h-0.5 flex-1 rounded-full sm:mx-2', step >= i ? 'bg-brand-600' : 'bg-slate-200')} />
+          )}
+          <div className="flex flex-col items-center gap-1">
+            <div
+              className={cn(
+                'flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold transition sm:h-10 sm:w-10',
+                step >= s.n ? 'bg-brand-600 text-white shadow-md shadow-blue-200' : 'bg-slate-200 text-slate-500'
+              )}
+            >
+              {step > s.n ? checkIcon : s.n}
+            </div>
+            <span className={cn('text-xs font-medium', step >= s.n ? 'text-slate-900' : 'text-slate-400')}>{s.label}</span>
+          </div>
+        </Fragment>
+      ))}
+    </div>
+  )
+}
+
+function Row({ label, value }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-2">
+      <dt className="text-sm text-slate-500">{label}</dt>
+      <dd className="text-right text-sm font-medium text-slate-900">{value}</dd>
+    </div>
+  )
+}
+
 export default function ClubRegister() {
-  const { user } = useAuth()
   const { toast } = useToast()
   const [events, setEvents] = useState(null)
   const [boxers, setBoxers] = useState(null)
   const [registrations, setRegistrations] = useState(null)
+  const [step, setStep] = useState(0)
   const [selEvent, setSelEvent] = useState('')
   const [selectedBoxers, setSelectedBoxers] = useState([])
   const [boxerCats, setBoxerCats] = useState({})
   const [payModal, setPayModal] = useState(null)
   const [payForm, setPayForm] = useState({ amount: '', method: '', reference: '', paidAt: '' })
   const [busy, setBusy] = useState(false)
-  const [justRegistered, setJustRegistered] = useState(null)
+  const [lastSummary, setLastSummary] = useState(null)
 
   const load = () => {
     api('/events').then((d) => setEvents(d.events)).catch(() => {})
@@ -103,7 +144,6 @@ export default function ClubRegister() {
 
   const openEvents = events.filter((e) => e.registrationOpen)
   const activeEvent = events.find((e) => e._id === selEvent)
-  const myRegs = registrations
 
   const alreadyRegisteredBoxerIds = new Set(registrations.filter((r) => r.eventId?._id === selEvent).map((r) => r.boxerId?._id))
 
@@ -138,16 +178,17 @@ export default function ClubRegister() {
 
   const setCat = (bid, key) => (e) => setBoxerCats((prev) => ({ ...prev, [bid]: { ...prev[bid], [key]: e.target.value } }))
 
+  const selectedBoxerList = boxers.filter((b) => selectedBoxers.includes(b._id))
+
   const submitRegistration = async () => {
-    if (!selEvent || selectedBoxers.length === 0) return
     for (const bid of selectedBoxers) {
       const cat = boxerCats[bid] || {}
       if (needsWeightCat && !cat.weight) {
-        toast(`Choose a weight category for every selected boxer`, 'error')
+        toast('Choose a weight category for every selected boxer', 'error')
         return
       }
       if (needsAgeCat && !cat.age) {
-        toast(`Choose an age category for every selected boxer`, 'error')
+        toast('Choose an age category for every selected boxer', 'error')
         return
       }
     }
@@ -164,10 +205,17 @@ export default function ClubRegister() {
           },
         })
       }
-      setJustRegistered(activeEvent)
       toast(`${selectedBoxers.length} boxer(s) registered`)
+      setLastSummary({
+        name: activeEvent.name,
+        fee: totalFee,
+        currency: activeEvent.feeStructure?.currency,
+        perBoxer: feePerBoxer,
+        requiresPayment,
+      })
       setSelectedBoxers([])
       setBoxerCats({})
+      setStep(3)
       load()
     } catch (err) {
       toast(err.message, 'error')
@@ -199,235 +247,315 @@ export default function ClubRegister() {
     }
   }
 
-  return (
-    <div className="space-y-8">
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-brand-900 px-6 py-8 text-white shadow-lg">
-        <div className="relative z-10">
-          <h1 className="text-2xl font-bold sm:text-3xl">Register for Events</h1>
-          <p className="mt-1 text-sm text-slate-300">
-            Select an event, choose your boxers, and see exactly where to pay the entry fee.
-          </p>
-        </div>
-        <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-brand-600/30 blur-2xl" />
-      </div>
+  const chooseEvent = (val) => {
+    setSelEvent(val)
+    setSelectedBoxers([])
+    setBoxerCats({})
+  }
 
-      <Card className="p-5 sm:p-6">
-        <StepBadge n={1} title="Select an Event" subtitle="Events currently open for registration" />
-        <div className="mt-4">
-          <select
-            value={selEvent}
-            onChange={(e) => { setSelEvent(e.target.value); setSelectedBoxers([]); setBoxerCats({}); setJustRegistered(null) }}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+  const feeLabel = activeEvent
+    ? requiresPayment
+      ? `${activeEvent.feeStructure.amount} ${activeEvent.feeStructure.currency}${feeType === 'per_boxer' ? ' / boxer' : ' per club'}`
+      : 'Free'
+    : ''
+
+  const ActionBar = ({ onBack, children }) => (
+    <div className="sticky bottom-20 z-20 mt-6 md:static">
+      <div className="flex items-stretch gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur md:border-0 md:bg-transparent md:p-0 md:shadow-none">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="flex h-12 shrink-0 items-center gap-1 rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-600"
           >
-            <option value="">Choose an event with open registration</option>
-            {openEvents.map((e) => (
-              <option key={e._id} value={e._id}>
-                {e.name}
-                {e.feeStructure?.type && e.feeStructure.type !== 'none' && Number(e.feeStructure.amount) > 0
-                  ? ` — Entry: ${e.feeStructure.amount} ${e.feeStructure.currency}${e.feeStructure.type === 'per_boxer' ? '/boxer' : ' (per club)'}`
-                  : ''}
-              </option>
-            ))}
-          </select>
+            {chevronLeft} Back
+          </button>
+        )}
+        {children}
+      </div>
+    </div>
+  )
 
-          {activeEvent && (
-            <div className="mt-4 grid gap-4 lg:grid-cols-3">
-              <div className="rounded-xl border border-slate-200 bg-white p-4 lg:col-span-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-base font-semibold text-slate-900">{activeEvent.name}</h3>
-                  <StatusBadge status={activeEvent.status} />
-                </div>
-                <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-                  <div className="flex justify-between"><dt className="text-slate-500">Date</dt><dd className="font-medium text-slate-900">{activeEvent.eventDate ? new Date(activeEvent.eventDate).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</dd></div>
-                  <div className="flex justify-between"><dt className="text-slate-500">Venue</dt><dd className="font-medium text-slate-900">{activeEvent.venue || '—'}, {activeEvent.location || '—'}</dd></div>
-                  <div className="flex justify-between"><dt className="text-slate-500">Deadline</dt><dd className="font-medium text-slate-900">{activeEvent.registrationDeadline ? new Date(activeEvent.registrationDeadline).toLocaleDateString() : '—'}</dd></div>
-                  <div className="flex justify-between"><dt className="text-slate-500">Weigh-In</dt><dd className="font-medium text-slate-900">{activeEvent.weighInDate ? new Date(activeEvent.weighInDate).toLocaleDateString() : '—'}</dd></div>
-                </dl>
-              </div>
-
-              <div className="rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 p-4 text-white">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">Registration Fee</p>
-                {requiresPayment ? (
-                  <>
-                    <p className="mt-1 text-2xl font-bold">
-                      {activeEvent.feeStructure?.amount} {activeEvent.feeStructure?.currency}
-                    </p>
-                    <p className="mt-0.5 text-xs text-slate-300">
-                      {activeEvent.feeStructure?.type === 'per_boxer' ? 'per boxer' : 'per club'}
-                    </p>
-                    {activeEvent.feeStructure?.notes && <p className="mt-2 text-xs text-slate-300">{activeEvent.feeStructure.notes}</p>}
-                  </>
-                ) : (
-                  <p className="mt-1 text-2xl font-bold text-slate-100">Free</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeEvent && requiresPayment && (
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <PayInfo event={activeEvent} />
-              <ContactCard contact={activeEvent.promoterContact} />
-            </div>
-          )}
+  return (
+    <div className="pb-4">
+      {step < 3 && (
+        <div className="relative mb-6 overflow-hidden rounded-2xl bg-slate-900 px-5 py-6 text-white sm:px-6">
+          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-brand-600/30 blur-2xl" />
+          <div className="relative">
+            <h1 className="text-xl font-bold sm:text-2xl">Register for Events</h1>
+            <p className="mt-1 text-sm text-slate-300">Three simple steps: pick an event, select boxers, confirm.</p>
+          </div>
         </div>
-      </Card>
+      )}
 
-      {selEvent && (
-        <Card className="p-5 sm:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <StepBadge n={2} title="Select Your Boxers" subtitle="Tick the boxers you want to enter" />
-            <div className="flex items-center gap-3">
-              {requiresPayment && selectedBoxers.length > 0 && (
-                <div className="rounded-lg bg-blue-50 px-3 py-2 text-right">
-                  <p className="text-xs text-slate-500">Estimated Total</p>
-                  <p className="text-sm font-bold text-brand-800">
-                    {totalFee} {activeEvent?.feeStructure?.currency}
-                    {feeType === 'per_club' ? ' (one-off per club)' : ` (${selectedBoxers.length} × ${feePerBoxer} per boxer)`}
-                  </p>
-                </div>
-              )}
-              <Button size="sm" onClick={submitRegistration} disabled={busy || selectedBoxers.length === 0}>
-                {busy ? <Spinner className="h-4 w-4 border-white" /> : `Register ${selectedBoxers.length} Selected`}
-              </Button>
-            </div>
+      {step < 3 && (
+        <div className="mb-5"><Stepper step={step} /></div>
+      )}
+
+      {/* STEP 1 — EVENT */}
+      {step === 0 && (
+        <>
+          <div className="mt-0">
+            <h2 className="mb-1 text-lg font-bold text-slate-900">Choose an event</h2>
+            <p className="mb-4 text-sm text-slate-500">Events currently open for registration.</p>
           </div>
 
-          {boxers.length === 0 ? (
-            <div className="mt-4">
-              <Empty title="No boxers in your database" message="Add boxers first, then return here to register them." />
+          <Card className="p-4 sm:p-5">
+            <div className="relative">
+              <select
+                value={selEvent}
+                onChange={(e) => chooseEvent(e.target.value)}
+                className={cn(
+                  'w-full appearance-none rounded-xl border bg-white py-3.5 pl-4 pr-10 text-base font-medium text-slate-900 focus:outline-none focus:ring-2',
+                  selEvent ? 'border-brand-500 focus:ring-brand-500' : 'border-slate-300 focus:ring-brand-500'
+                )}
+              >
+                <option value="">Select an event…</option>
+                {openEvents.map((e) => (
+                  <option key={e._id} value={e._id}>{e.name}</option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">{chevronRight}</span>
             </div>
-          ) : (
-            <ul className="mt-5 divide-y divide-slate-200">
-              {boxers.map((b) => {
-                const already = alreadyRegisteredBoxerIds.has(b._id)
-                const checked = selectedBoxers.includes(b._id)
-                return (
-                  <li key={b._id} className="py-3">
-                    <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${b.gender === 'F' ? 'bg-blue-100 text-brand-800' : 'bg-slate-900 text-white'}`}>
-                        {b.fullName?.split(' ').map((w) => w[0]).slice(0, 2).join('') || '?'}
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={checked}
+
+            {!selEvent && openEvents.length === 0 && (
+              <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                No events are open for registration right now. New events appear here as soon as a promoter opens them.
+              </p>
+            )}
+
+            {activeEvent && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold text-slate-900">{activeEvent.name}</h3>
+                  <StatusBadge status={activeEvent.status} />
+                </div>
+                <dl className="mt-1 divide-y divide-slate-100">
+                  <Row label="Date" value={activeEvent.eventDate ? new Date(activeEvent.eventDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '—'} />
+                  <Row label="Venue" value={`${activeEvent.venue || '—'}${activeEvent.location ? `, ${activeEvent.location}` : ''}`} />
+                  <Row label="Registration closes" value={activeEvent.registrationDeadline ? new Date(activeEvent.registrationDeadline).toLocaleDateString() : '—'} />
+                  <Row label="Weigh-In" value={activeEvent.weighInDate ? new Date(activeEvent.weighInDate).toLocaleDateString() : '—'} />
+                </dl>
+                <div className="mt-2 flex items-center justify-between rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 px-4 py-3 text-white">
+                  <span className="text-sm font-medium text-slate-300">Entry fee</span>
+                  <span className="text-lg font-bold">{feeLabel}</span>
+                </div>
+                {activeEvent.feeStructure?.notes && (
+                  <p className="mt-2 text-xs text-slate-500">{activeEvent.feeStructure.notes}</p>
+                )}
+              </div>
+            )}
+          </Card>
+
+          <ActionBar>
+            <Button size="lg" className="h-12 flex-1" disabled={!selEvent} onClick={() => setStep(1)}>
+              Continue {chevronRight}
+            </Button>
+          </ActionBar>
+        </>
+      )}
+
+      {/* STEP 2 — BOXERS */}
+      {step === 1 && (
+        <>
+          <div className="mt-0">
+            <h2 className="mb-1 text-lg font-bold text-slate-900">Select your boxers</h2>
+            <p className="mb-4 text-sm text-slate-500">
+              Tick the boxers to enter{selectedBoxers.length > 0 ? ` — ${selectedBoxers.length} selected` : ''}.
+            </p>
+          </div>
+
+          <Card className="p-4 sm:p-5">
+            {boxers.length === 0 ? (
+              <Empty title="No boxers in your database" message="Add boxers first, then return here to register them." />
+            ) : (
+              <ul className="divide-y divide-slate-200">
+                {boxers.map((b) => {
+                  const already = alreadyRegisteredBoxerIds.has(b._id)
+                  const checked = selectedBoxers.includes(b._id)
+                  return (
+                    <li key={b._id} className={cn('py-3', already && 'opacity-60')}>
+                      <button
+                        type="button"
                         disabled={already}
-                        onChange={() => toggleSelect(b._id)}
-                        className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                      />
-                      <div className="flex-1">
-                        <p className="font-medium text-slate-900">{b.fullName}</p>
-                        <p className="text-sm text-slate-500">
-                          <Badge tone={b.gender === 'F' ? 'blue' : 'dark'}>{b.gender === 'F' ? 'Female' : 'Male'}</Badge>
-                          {b.weightCategory && <span className="ml-1.5">{b.weightCategory}</span>}
-                          {b.registeredWeightKg && <span className="text-slate-400"> · {b.registeredWeightKg}kg</span>}
-                          {b.ageCategory && <span className="text-slate-400"> · {b.ageCategory}</span>}
-                        </p>
-                      </div>
-                      {already && <span className="text-xs font-medium text-brand-700">Already registered</span>}
-                    </div>
-                    {checked && (needsWeightCat || needsAgeCat) && (
-                      <div className="mt-3 ml-[52px] grid gap-3 rounded-lg bg-slate-50 p-3 sm:grid-cols-2">
-                        {needsWeightCat && (
-                          <div>
-                            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Weight Category *</label>
-                            <select
-                              value={boxerCats[b._id]?.weight || ''}
-                              onChange={setCat(b._id, 'weight')}
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-500 focus:outline-none"
-                            >
-                              <option value="">Select weight category</option>
-                              {eventWeightCats.map((c) => (
-                                <option key={c} value={c}>{c}</option>
-                              ))}
-                            </select>
-                          </div>
+                        onClick={() => toggleSelect(b._id)}
+                        className="flex w-full items-center gap-3 text-left"
+                      >
+                        <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold', b.gender === 'F' ? 'bg-blue-100 text-brand-800' : 'bg-slate-900 text-white')}>
+                          {b.fullName?.split(' ').map((w) => w[0]).slice(0, 2).join('') || '?'}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium text-slate-900">{b.fullName}</span>
+                          <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm text-slate-500">
+                            <Badge tone={b.gender === 'F' ? 'blue' : 'dark'}>{b.gender === 'F' ? 'Female' : 'Male'}</Badge>
+                            {b.weightCategory && <span>{b.weightCategory}</span>}
+                            {b.registeredWeightKg && <span className="text-slate-400">· {b.registeredWeightKg}kg</span>}
+                            {b.ageCategory && <span className="text-slate-400">· {b.ageCategory}</span>}
+                          </span>
+                        </span>
+                        {already ? (
+                          <span className="shrink-0 text-xs font-semibold text-brand-700">Registered</span>
+                        ) : (
+                          <span
+                            className={cn(
+                              'flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 transition',
+                              checked ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 bg-white text-transparent'
+                            )}
+                          >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </span>
                         )}
-                        {needsAgeCat && (
-                          <div>
-                            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Age Category *</label>
-                            <select
-                              value={boxerCats[b._id]?.age || ''}
-                              onChange={setCat(b._id, 'age')}
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-500 focus:outline-none"
-                            >
-                              <option value="">Select age category</option>
-                              {eventAgeCats.map((c) => (
-                                <option key={c} value={c}>{c}</option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                      </button>
+                      {checked && (needsWeightCat || needsAgeCat) && (
+                        <div className="mt-3 ml-[52px] grid gap-3 rounded-xl bg-slate-50 p-3 sm:grid-cols-2">
+                          {needsWeightCat && (
+                            <div>
+                              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Weight Category *</label>
+                              <select
+                                value={boxerCats[b._id]?.weight || ''}
+                                onChange={setCat(b._id, 'weight')}
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-brand-500 focus:outline-none"
+                              >
+                                <option value="">Select weight category</option>
+                                {eventWeightCats.map((c) => (
+                                  <option key={c} value={c}>{c}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                          {needsAgeCat && (
+                            <div>
+                              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Age Category *</label>
+                              <select
+                                value={boxerCats[b._id]?.age || ''}
+                                onChange={setCat(b._id, 'age')}
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-brand-500 focus:outline-none"
+                              >
+                                <option value="">Select age category</option>
+                                {eventAgeCats.map((c) => (
+                                  <option key={c} value={c}>{c}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </Card>
+
+          <ActionBar onBack={() => setStep(0)}>
+            <Button size="lg" className="h-12 flex-1" disabled={selectedBoxers.length === 0} onClick={() => setStep(2)}>
+              Continue ({selectedBoxers.length} selected) {chevronRight}
+            </Button>
+          </ActionBar>
+        </>
+      )}
+
+      {/* STEP 3 — CONFIRM */}
+      {step === 2 && activeEvent && (
+        <>
+          <div className="mt-0">
+            <h2 className="mb-1 text-lg font-bold text-slate-900">Review & confirm</h2>
+            <p className="mb-4 text-sm text-slate-500">Check the details before submitting.</p>
+          </div>
+
+          <Card className="p-4 sm:p-5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Event</p>
+            <p className="mt-1 text-base font-bold text-slate-900">{activeEvent.name}</p>
+            <p className="text-sm text-slate-500">
+              {activeEvent.eventDate ? new Date(activeEvent.eventDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+              {activeEvent.location && ` · ${activeEvent.location}`}
+            </p>
+
+            <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">Boxers ({selectedBoxerList.length})</p>
+            <ul className="mt-2 divide-y divide-slate-100">
+              {selectedBoxerList.map((b) => {
+                const cat = boxerCats[b._id] || {}
+                return (
+                  <li key={b._id} className="flex items-center justify-between gap-3 py-2">
+                    <span className="font-medium text-slate-900">{b.fullName}</span>
+                    <span className="text-sm text-slate-500">
+                      {[cat.gender === 'F' ? 'Female' : 'Male', cat.weight, cat.age].filter(Boolean).join(' · ') || '—'}
+                    </span>
                   </li>
                 )
               })}
             </ul>
-          )}
+
+            <div className="mt-5 flex items-center justify-between rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 px-4 py-3 text-white">
+              <span className="text-sm font-medium text-slate-300">
+                Total{requiresPayment && feeType === 'per_boxer' ? ` (${selectedBoxerList.length} × ${feePerBoxer})` : ''}
+              </span>
+              <span className="text-lg font-bold">
+                {requiresPayment ? `${totalFee} ${activeEvent.feeStructure?.currency}` : 'Free'}
+              </span>
+            </div>
+          </Card>
 
           {requiresPayment && (
-            <div className="mt-5 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-900">
-              After registering, pay the fee at the account shown above, then contact the promoter to confirm your payment was received.
-            </div>
-          )}
-        </Card>
-      )}
-
-      {justRegistered && (
-        <Card className="p-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-600 text-white shadow-md shadow-blue-200">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">Registration Submitted!</h3>
-              <p className="text-sm text-slate-500">Your boxers have been entered for {justRegistered.name}.</p>
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Next Step — Pay the Fee {requiresPayment && `(${justRegistered.feeStructure?.amount} ${justRegistered.feeStructure?.currency} ${justRegistered.feeStructure?.type === 'per_boxer' ? 'per boxer' : 'per club'})`}</p>
-              {requiresPayment ? (
-                <p className="mt-2 text-sm text-slate-600">
-                  Send the registration fee to the account shown for this event, and use your club name as the payment reference where possible.
-                </p>
-              ) : (
-                <p className="mt-2 text-sm text-slate-600">No fee is required for this event — you can skip straight to confirmation.</p>
-              )}
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Next Step — Get Confirmation</p>
-              <p className="mt-2 text-sm text-slate-600">
-                Contact the promoter to confirm your registration and payment so your boxers can be approved.
+            <Card className="mt-4 p-4 sm:p-5">
+              <p className="text-sm font-bold text-slate-900">How to pay</p>
+              <p className="mt-0.5 text-sm text-slate-500">
+                Send {totalFee} {activeEvent.feeStructure?.currency} to the account below, then submit the details after registering.
               </p>
-              <ContactCard contact={justRegistered.promoterContact} />
-            </div>
-          </div>
+              <PayInfo event={activeEvent} />
+              <div className="mt-3">
+                <ContactCard contact={activeEvent.promoterContact} />
+              </div>
+            </Card>
+          )}
 
-          <Button variant="secondary" className="mt-4" onClick={() => setJustRegistered(null)}>Done</Button>
+          <ActionBar onBack={() => setStep(1)}>
+            <Button size="lg" className="h-12 flex-1" onClick={submitRegistration} disabled={busy}>
+              {busy ? <Spinner className="h-5 w-5 border-white" /> : `Confirm Registration${requiresPayment ? ` · ${totalFee} ${activeEvent.feeStructure?.currency}` : ''}`}
+            </Button>
+          </ActionBar>
+        </>
+      )}
+
+      {/* SUCCESS */}
+      {step === 3 && (
+        <Card className="p-8 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+            <svg className="h-9 w-9" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="mt-4 text-xl font-bold text-slate-900">Registration Submitted!</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Your boxers have been entered for {lastSummary?.name}. A promoter will review them — check the list below for their status.
+          </p>
+          {lastSummary?.requiresPayment && (
+            <p className="mt-3 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-900">
+              Don't forget to pay the {lastSummary.fee} {lastSummary.currency} entry fee to the account shown for this event.
+            </p>
+          )}
+          <Button size="lg" className="mt-6 w-full sm:w-auto" onClick={() => { setStep(0); setSelEvent(''); setLastSummary(null) }}>
+            Done — register more boxers
+          </Button>
         </Card>
       )}
 
-      <Card className="p-0">
-        <div className="flex flex-wrap items-center justify-between border-b border-slate-200 bg-slate-50/60 px-5 py-3">
-          <div>
-            <h3 className="font-semibold text-slate-900">My Registrations & Payments</h3>
-            <p className="text-xs text-slate-500">Track approval status and submit payment details</p>
-          </div>
+      {/* MY REGISTRATIONS */}
+      <Card className="mt-6 p-0">
+        <div className="border-b border-slate-200 bg-slate-50/60 px-5 py-3">
+          <h3 className="font-semibold text-slate-900">My Registrations</h3>
+          <p className="text-xs text-slate-500">Track approval status and submit payment details</p>
         </div>
-        {myRegs.length === 0 ? (
+        {registrations.length === 0 ? (
           <div className="p-6">
             <Empty title="No registrations yet" />
           </div>
         ) : (
           <ul className="divide-y divide-slate-200">
-            {myRegs.map((r) => (
+            {registrations.map((r) => (
               <li key={r._id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-                <div>
+                <div className="min-w-0">
                   <p className="font-medium text-slate-900">{r.boxerId?.fullName} — {r.eventId?.name}</p>
                   <p className="text-sm text-slate-500">
                     Category: {r.category?.weight || '—'}

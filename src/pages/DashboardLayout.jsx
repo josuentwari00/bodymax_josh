@@ -27,13 +27,18 @@ function BottomNavItem({ to, label, icon, end }) {
       end={end}
       className={({ isActive }) =>
         cn(
-          'flex flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium transition',
-          isActive ? 'text-brand-700' : 'text-slate-500 hover:text-slate-900'
+          'relative flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium transition',
+          isActive ? 'text-brand-700' : 'text-slate-500 active:text-slate-900'
         )
       }
     >
-      <span className="h-6 w-6">{icon}</span>
-      {label}
+      {({ isActive }) => (
+        <>
+          {isActive && <span className="absolute top-1 left-1/2 h-1 w-4 -translate-x-1/2 rounded-full bg-brand-600" />}
+          <span className="h-6 w-6">{icon}</span>
+          {label}
+        </>
+      )}
     </NavLink>
   )
 }
@@ -199,7 +204,7 @@ export default function DashboardLayout() {
       </main>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 shadow-[0_-2px_10px_rgba(0,0,0,0.04)] backdrop-blur-md md:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="grid" style={{ gridTemplateColumns: `repeat(${mobileNav.length}, minmax(0, 1fr))` }}>
           {mobileNav.map((it) => (
             <BottomNavItem key={it.label} to={it.to} label={it.label} icon={it.icon} end={it.end} />
