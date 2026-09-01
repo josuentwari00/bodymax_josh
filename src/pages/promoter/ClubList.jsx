@@ -11,7 +11,7 @@ export default function ClubList() {
   const { toast } = useToast()
   const navigate = useNavigate()
 
-  const load = () => api('/clubs').then((d) => setClubs(d.clubs)).catch(() => {})
+  const load = () => { api('/clubs').then((d) => setClubs(d.clubs)).catch(() => {}) }
   useEffect(load, [])
 
   const handleDelete = async (club) => {

@@ -32,7 +32,7 @@ export default function BoxerList() {
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
 
-  const load = () => api('/boxers').then((d) => setBoxers(d.boxers)).catch(() => {})
+  const load = () => { api('/boxers').then((d) => setBoxers(d.boxers)).catch(() => {}) }
   useEffect(load, [])
   useEffect(() => {
     api('/clubs').then((d) => setClubs(d.clubs || [])).catch(() => {})

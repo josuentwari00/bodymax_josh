@@ -30,7 +30,7 @@ export default function ClubBoxers() {
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
 
-  const load = () => api('/boxers').then((d) => setBoxers(d.boxers)).catch(() => {})
+  const load = () => { api('/boxers').then((d) => setBoxers(d.boxers)).catch(() => {}) }
   useEffect(load, [])
 
   const openCreate = () => {
