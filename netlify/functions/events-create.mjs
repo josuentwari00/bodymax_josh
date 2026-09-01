@@ -15,7 +15,7 @@ function slugify(str) {
 export default async (event) => {
   event = await normalizeRequest(event)
   try {
-    requireRole('promoter')(event)
+    await requireRole('promoter')(event)
 
     if (event.httpMethod === 'OPTIONS') {
       return success({})

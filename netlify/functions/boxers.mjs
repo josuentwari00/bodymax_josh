@@ -71,7 +71,7 @@ export default async (event) => {
 
     // Create boxer
     if (method === 'POST') {
-      const roleUser = requireRole('club', 'promoter')
+      const roleUser = await requireRole('club', 'promoter')(event)
       // club can only create for itself
       let body = JSON.parse(event.body || '{}')
       let effectiveClubId = body.clubId
