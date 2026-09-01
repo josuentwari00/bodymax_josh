@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken'
 import User from '../models/User.js'
 import { connectDB } from '../db.js'
+import { normalizeRequest } from '../request.js'
 
 const JWT_SECRET = process.env.JWT_SECRET
 
@@ -20,6 +21,7 @@ export async function verifyToken(token) {
 }
 
 export async function requireAuth(event) {
+  event = await normalizeRequest(event)
   const authHeader = event.headers.authorization || event.headers.Authorization
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     const error = new Error('Not authenticated')

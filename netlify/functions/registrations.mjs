@@ -3,8 +3,10 @@ import Boxer from './_shared/models/Boxer.js'
 import Registration from './_shared/models/Registration.js'
 import Event from './_shared/models/Event.js'
 import { requireAuth, success, errorResponse } from './_shared/middleware/auth.js'
+import { normalizeRequest } from './_shared/request.js'
 
 export default async (event) => {
+  event = await normalizeRequest(event)
   try {
     await connectDB()
     const user = await requireAuth(event)

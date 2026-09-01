@@ -2,8 +2,10 @@
 import Club from './_shared/models/Club.js'
 import Boxer from './_shared/models/Boxer.js'
 import { requireAuth, requireRole, success, errorResponse } from './_shared/middleware/auth.js'
+import { normalizeRequest } from './_shared/request.js'
 
 export default async (event) => {
+  event = await normalizeRequest(event)
   try {
     await connectDB()
     const user = await requireAuth(event)

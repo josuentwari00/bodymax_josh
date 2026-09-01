@@ -2,6 +2,7 @@
 import Registration from './_shared/models/Registration.js'
 import Event from './_shared/models/Event.js'
 import { requireRole, success, errorResponse } from './_shared/middleware/auth.js'
+import { normalizeRequest } from './_shared/request.js'
 
 function nextStatus(action, reg) {
   switch (action) {
@@ -24,6 +25,7 @@ function nextStatus(action, reg) {
 }
 
 export default async (event) => {
+  event = await normalizeRequest(event)
   try {
     requireRole('promoter')(event)
 

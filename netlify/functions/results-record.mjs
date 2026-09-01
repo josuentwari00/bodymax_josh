@@ -3,8 +3,10 @@ import { connectDB } from './_shared/db.js'
 import Bout from './_shared/models/Bout.js'
 import Registration from './_shared/models/Registration.js'
 import { requireAuth, requireRole, success, errorResponse } from './_shared/middleware/auth.js'
+import { normalizeRequest } from './_shared/request.js'
 
 export default async (event) => {
+  event = await normalizeRequest(event)
   try {
     const user = await requireAuth(event)
 

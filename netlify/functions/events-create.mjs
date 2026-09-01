@@ -1,6 +1,7 @@
 ﻿import { connectDB } from './_shared/db.js'
 import Event from './_shared/models/Event.js'
 import { requireRole, success, errorResponse } from './_shared/middleware/auth.js'
+import { normalizeRequest } from './_shared/request.js'
 
 function slugify(str) {
   return str
@@ -12,6 +13,7 @@ function slugify(str) {
 }
 
 export default async (event) => {
+  event = await normalizeRequest(event)
   try {
     requireRole('promoter')(event)
 
