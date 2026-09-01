@@ -106,9 +106,12 @@ export default function ClubRegister() {
 
   const alreadyRegisteredBoxerIds = new Set(registrations.filter((r) => r.eventId?._id === selEvent).map((r) => r.boxerId?._id))
 
-  const feePerBoxer = activeEvent?.feeStructure?.type === 'per_boxer' ? Number(activeEvent.feeStructure.amount) || 0 : 0
-  const totalFee = feePerBoxer * selectedBoxers.length
-  const requiresPayment = !!activeEvent?.requirePayment && activeEvent?.feeStructure?.type !== 'none'
+  const feeType = activeEvent?.feeStructure?.type
+  const feeAmount = Number(activeEvent?.feeStructure?.amount) || 0
+  const feePerBoxer = feeType === 'per_boxer' ? feeAmount : 0
+  const requiresPayment = !!activeEvent && !!feeType && feeType !== 'none' && feeAmount > 0
+  const perBoxerTotal = feePerBoxer * selectedBoxers.length
+  const totalFee = feeType === 'per_club' ? (selectedBoxers.length > 0 ? feeAmount : 0) : perBoxerTotal
 
   const toggleSelect = (bid) => {
     if (selectedBoxers.includes(bid)) {
@@ -181,7 +184,12 @@ export default function ClubRegister() {
           >
             <option value="">Choose an event with open registration</option>
             {openEvents.map((e) => (
-              <option key={e._id} value={e._id}>{e.name}</option>
+              <option key={e._id} value={e._id}>
+                {e.name}
+                {e.feeStructure?.type && e.feeStructure.type !== 'none' && Number(e.feeStructure.amount) > 0
+                  ? ` — Entry: ${e.feeStructure.amount} ${e.feeStructure.currency}${e.feeStructure.type === 'per_boxer' ? '/boxer' : ' (per club)'}`
+                  : ''}
+              </option>
             ))}
           </select>
 
@@ -236,7 +244,10 @@ export default function ClubRegister() {
               {requiresPayment && selectedBoxers.length > 0 && (
                 <div className="rounded-lg bg-blue-50 px-3 py-2 text-right">
                   <p className="text-xs text-slate-500">Estimated Total</p>
-                  <p className="text-sm font-bold text-brand-800">{totalFee} {activeEvent?.feeStructure?.currency} ({selectedBoxers.length} × {feePerBoxer})</p>
+                  <p className="text-sm font-bold text-brand-800">
+                    {totalFee} {activeEvent?.feeStructure?.currency}
+                    {feeType === 'per_club' ? ' (one-off per club)' : ` (${selectedBoxers.length} × ${feePerBoxer} per boxer)`}
+                  </p>
                 </div>
               )}
               <Button size="sm" onClick={submitRegistration} disabled={busy || selectedBoxers.length === 0}>
