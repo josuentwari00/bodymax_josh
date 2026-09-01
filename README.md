@@ -35,6 +35,7 @@ bodymax/
 │   ├── utils/api.js    # Authenticated fetch wrapper
 │   └── App.jsx         # Routing
 ├── netlify/functions/  # Serverless API endpoints
+│   ├── _shared/        # Shared code bundled into functions (models, db, auth)
 │   ├── auth/           # login, me
 │   ├── users/          # create (club accounts)
 │   ├── clubs/          # list / detail
@@ -47,10 +48,7 @@ bodymax/
 │   ├── results/        # record (winner advancement)
 │   ├── dashboard.mjs   # statistics
 │   └── public-events.mjs
-├── shared/             # Models + helpers used only by functions
-│   ├── models/         # Mongoose schemas (User, Club, Boxer, Event, Registration, Bout)
-│   └── middleware/     # JWT auth helpers
-│   └── db.js           # MongoDB connection
+├── shared/             # Mirrored models used by the local seed script
 ├── scripts/            # seed-promoter.mjs
 └── netlify.toml        # Netlify build/function config
 ```

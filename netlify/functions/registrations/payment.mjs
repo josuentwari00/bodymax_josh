@@ -1,6 +1,6 @@
-import { connectDB } from '../../shared/db.js'
-import Registration from '../../shared/models/Registration.js'
-import { requireAuth, success, errorResponse } from '../../shared/middleware/auth.js'
+﻿import { connectDB } from '../_shared/db.js'
+import Registration from '../_shared/models/Registration.js'
+import { requireAuth, success, errorResponse } from '../_shared/middleware/auth.js'
 
 export default async (event) => {
   try {

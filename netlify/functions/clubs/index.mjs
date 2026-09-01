@@ -1,7 +1,7 @@
-import { connectDB } from '../../shared/db.js'
-import Club from '../../shared/models/Club.js'
-import Boxer from '../../shared/models/Boxer.js'
-import { requireAuth, requireRole, success, errorResponse } from '../../shared/middleware/auth.js'
+﻿import { connectDB } from '../_shared/db.js'
+import Club from '../_shared/models/Club.js'
+import Boxer from '../_shared/models/Boxer.js'
+import { requireAuth, requireRole, success, errorResponse } from '../_shared/middleware/auth.js'
 
 export default async (event) => {
   try {

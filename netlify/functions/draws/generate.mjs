@@ -1,9 +1,9 @@
-import mongoose from 'mongoose'
-import { connectDB } from '../../shared/db.js'
-import Event from '../../shared/models/Event.js'
-import Registration from '../../shared/models/Registration.js'
-import Bout from '../../shared/models/Bout.js'
-import { requireRole, success, errorResponse } from '../../shared/middleware/auth.js'
+﻿import mongoose from 'mongoose'
+import { connectDB } from '../_shared/db.js'
+import Event from '../_shared/models/Event.js'
+import Registration from '../_shared/models/Registration.js'
+import Bout from '../_shared/models/Bout.js'
+import { requireRole, success, errorResponse } from '../_shared/middleware/auth.js'
 
 function nextPowerOfTwo(n) {
   let p = 1
