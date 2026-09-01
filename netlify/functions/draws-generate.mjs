@@ -1,25 +1,10 @@
-﻿import mongoose from 'mongoose'
-import { connectDB } from './_shared/db.js'
+﻿import { connectDB } from './_shared/db.js'
 import Event from './_shared/models/Event.js'
 import Registration from './_shared/models/Registration.js'
 import Bout from './_shared/models/Bout.js'
+import { nextPowerOfTwo, buildBracket } from './_shared/bracket.js'
 import { requireRole, success, errorResponse } from './_shared/middleware/auth.js'
 import { normalizeRequest } from './_shared/request.js'
-
-function nextPowerOfTwo(n) {
-  let p = 1
-  while (p < n) p *= 2
-  return p
-}
-
-function roundName(rounds, round) {
-  if (round === rounds) return 'Final'
-  if (round === rounds - 1) return 'Semi-Final'
-  if (round === rounds - 2) return 'Quarter-Final'
-  if (round === rounds - 3) return 'Round of 16'
-  if (round === 1) return 'Preliminary'
-  return `Round ${round}`
-}
 
 export default async (event) => {
   event = await normalizeRequest(event)
@@ -36,7 +21,7 @@ export default async (event) => {
     if (!eventId) return errorResponse({ message: 'eventId required', status: 400 })
 
     const body = JSON.parse(event.body || '{}')
-    const { seedByClub = true, weight = '', age = '', gender = '' } = body
+    const { weight = '', age = '', gender = '' } = body
 
     await connectDB()
 
@@ -66,9 +51,8 @@ export default async (event) => {
 
     const N = eligible.length
     const size = nextPowerOfTwo(N)
-    const roundsCount = Math.log2(size)
 
-    // Shuffle participants
+    // Shuffle participants for a random draw
     let participants = [...eligible]
     for (let i = participants.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
@@ -92,74 +76,7 @@ export default async (event) => {
       for (let i = 0; i < participants.length; i++) leafSlots[i] = participants[i]._id
     }
 
-    let boutNumber = 1
-
-    // Round 1 (leaf pairs)
-    const savedR1 = []
-    for (let m = 0; m < size / 2; m++) {
-      const a = leafSlots[2 * m]
-      const b = leafSlots[2 * m + 1]
-      const bout = new Bout({
-        eventId,
-        category: { weight, age, gender },
-        round: 1,
-        roundName: roundName(roundsCount, 1),
-        boutNumber: boutNumber++,
-        bracketPosition: m,
-        boxerAId: a,
-        boxerBId: b,
-        status: a && b ? 'scheduled' : 'walkover',
-      })
-      if (!a || !b) {
-        bout.winnerId = a || b
-        bout.result = { winnerId: a || b, method: 'Walkover', recordedAt: new Date() }
-      }
-      savedR1.push(await bout.save())
-    }
-
-    // Map round -> slot -> bout id for parent linking
-    const roundById = {}
-    roundById[1] = {}
-    savedR1.forEach((b, i) => { roundById[1][i] = b._id })
-
-    // Rounds 2..roundsCount
-    for (let r = 1; r < roundsCount; r++) {
-      const matchCount = size / Math.pow(2, r + 1)
-      const prev = roundById[r]
-      const cur = {}
-      for (let m = 0; m < matchCount; m++) {
-        const parentA = prev[2 * m]
-        const parentB = prev[2 * m + 1]
-        const bout = new Bout({
-          eventId,
-          category: { weight, age, gender },
-          round: r + 1,
-          roundName: roundName(roundsCount, r + 1),
-          boutNumber: boutNumber++,
-          bracketPosition: m,
-          status: 'ready',
-        })
-        const saved = await bout.save()
-        cur[m] = saved._id
-        await Promise.all([
-          Bout.updateOne({ _id: parentA }, { $set: { parentBoutId: saved._id, feedSide: 'A' } }),
-          Bout.updateOne({ _id: parentB }, { $set: { parentBoutId: saved._id, feedSide: 'B' } }),
-        ])
-      }
-      roundById[r + 1] = cur
-    }
-
-    // Advance walkover winners from round 1 into round 2
-    const round2 = roundById[2] || {}
-    for (let i = 0; i < savedR1.length; i++) {
-      const bout = savedR1[i]
-      if (bout.status === 'walkover' && bout.winnerId && round2[Math.floor(i / 2)]) {
-        const side = i % 2 === 0 ? 'A' : 'B'
-        const r2boutId = round2[Math.floor(i / 2)]
-        const set = side === 'A' ? { boxerAId: bout.winnerId } : { boxerBId: bout.winnerId }
-        await Bout.updateOne({ _id: r2boutId }, { $set: set })
-      }
-    }
+    await buildBracket({ eventId, category: { weight, age, gender }, leafSlots })
 
     const allBouts = await Bout.find({
       eventId,
@@ -168,8 +85,14 @@ export default async (event) => {
       'category.gender': gender,
     })
       .sort({ round: 1, bracketPosition: 1 })
-      .populate('boxerAId')
-      .populate('boxerBId')
+      .populate({
+        path: 'boxerAId',
+        populate: { path: 'boxerId clubId' },
+      })
+      .populate({
+        path: 'boxerBId',
+        populate: { path: 'boxerId clubId' },
+      })
       .populate('winnerId')
       .lean()
 
