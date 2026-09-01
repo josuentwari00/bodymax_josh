@@ -1,13 +1,21 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { api } from '../../utils/api.js'
+import { useAuth } from '../../context/AuthContext.jsx'
 
 export default function Home() {
   const [events, setEvents] = useState([])
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
 
   useEffect(() => {
     api('/public-events').then((d) => setEvents(d.events || [])).catch(() => {})
   }, [])
+
+  const handleSignOut = () => {
+    logout()
+    navigate('/')
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -16,12 +24,26 @@ export default function Home() {
           <span className="text-xl font-bold text-slate-900">Bodymax</span>
           <nav className="flex items-center gap-4">
             <Link to="/events" className="text-sm font-medium text-slate-600 hover:text-slate-900">Events</Link>
-            <Link
-              to="/login"
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
-            >
-              Sign in
-            </Link>
+            {user ? (
+              <>
+                <Link to="/app" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">
+                  Dashboard
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="text-sm font-medium text-slate-600 hover:text-slate-900"
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+              >
+                Sign in
+              </Link>
+            )}
           </nav>
         </div>
       </header>
