@@ -6,6 +6,10 @@ if (!cached) {
   cached = global.mongoose = { conn: null, promise: null }
 }
 
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err)
+})
+
 export async function connectDB() {
   if (cached.conn) {
     return cached.conn
@@ -16,7 +20,9 @@ export async function connectDB() {
     if (!uri) {
       throw new Error('MONGODB_URI environment variable is not set')
     }
-    cached.promise = mongoose.connect(uri).then((mongoose) => mongoose)
+    cached.promise = mongoose
+      .connect(uri, { serverSelectionTimeoutMS: 15000 })
+      .then((mongoose) => mongoose)
   }
 
   cached.conn = await cached.promise
