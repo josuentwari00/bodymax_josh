@@ -1,0 +1,46 @@
+import { connectDB } from '../../shared/db.js'
+import Event from '../../shared/models/Event.js'
+import Registration from '../../shared/models/Registration.js'
+import { requireAuth, success, errorResponse } from '../../shared/middleware/auth.js'
+
+export default async (event) => {
+  try {
+    await connectDB()
+    const user = await requireAuth(event)
+
+    const params = event.queryStringParameters || {}
+    const { id, isPublic } = params
+
+    if (id) {
+      const ev = await Event.findById(id).lean()
+      if (!ev) {
+        return errorResponse({ message: 'Event not found', status: 404 })
+      }
+      return success({ event: ev })
+    }
+
+    let query = {}
+
+    if (isPublic === 'true') {
+      query = { public: true }
+    }
+
+    if (user.role === 'club') {
+      query = { ...query }
+    }
+
+    const events = await Event.find(query)
+      .sort({ eventDate: -1 })
+      .lean()
+
+    for (const ev of events) {
+      ev.registrationCount = await Registration.countDocuments({ eventId: ev._id })
+      ev.approvedCount = await Registration.countDocuments({ eventId: ev._id, status: { $in: ['approved', 'payment_pending', 'payment_confirmed', 'awaiting_weighin', 'weighed', 'eligible', 'eliminated', 'completed'] } })
+    }
+
+    return success({ events })
+  } catch (err) {
+    return errorResponse(err)
+  }
+}
+

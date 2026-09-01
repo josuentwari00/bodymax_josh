@@ -1,0 +1,25 @@
+import { connectDB } from '../../shared/db.js'
+import Event from '../../shared/models/Event.js'
+import Registration from '../../shared/models/Registration.js'
+import { success, errorResponse } from '../../shared/middleware/auth.js'
+
+export default async (event) => {
+  try {
+    await connectDB()
+    const params = event.queryStringParameters || {}
+    const { id } = params
+
+    if (id) {
+      const ev = await Event.findOne({ _id: id, public: true }).lean()
+      if (!ev) return errorResponse({ message: 'Event not found', status: 404 })
+      return success({ event: ev })
+    }
+
+    const events = await Event.find({ public: true })
+      .sort({ eventDate: -1 })
+      .lean()
+    return success({ events })
+  } catch (err) {
+    return errorResponse(err)
+  }
+}

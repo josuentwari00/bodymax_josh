@@ -1,0 +1,102 @@
+import { connectDB } from '../../shared/db.js'
+import Registration from '../../shared/models/Registration.js'
+import Event from '../../shared/models/Event.js'
+import { requireRole, success, errorResponse } from '../../shared/middleware/auth.js'
+
+function nextStatus(action, reg) {
+  switch (action) {
+    case 'approve':
+      return {
+        status: reg.payment?.status === 'pending' || reg.payment?.status === 'submitted'
+          ? 'payment_pending'
+          : 'approved',
+        promoterFeedback: '',
+      }
+    case 'needs_correction':
+      return { status: 'needs_correction' }
+    case 'reject':
+      return { status: 'withdrawn' }
+    case 'withdraw':
+      return { status: 'withdrawn' }
+    default:
+      return null
+  }
+}
+
+export default async (event) => {
+  try {
+    requireRole('promoter')(event)
+
+    if (event.httpMethod === 'OPTIONS') return success({})
+
+    const params = event.queryStringParameters || {}
+    const { id } = params
+    if (!id) return errorResponse({ message: 'Registration id required', status: 400 })
+
+    const body = JSON.parse(event.body || '{}')
+    const { action, feedback } = body
+
+    await connectDB()
+    const reg = await Registration.findById(id)
+    if (!reg) return errorResponse({ message: 'Registration not found', status: 404 })
+
+    if (action === 'approve') {
+      const st = nextStatus('approve', reg)
+      reg.status = st.status
+      if (feedback) reg.promoterFeedback = feedback
+      await reg.save()
+      return success({ registration: reg })
+    }
+
+    if (action === 'payment_confirm') {
+      reg.payment.status = 'confirmed'
+      reg.payment.confirmedAt = new Date()
+      if (reg.status === 'payment_pending' || reg.status === 'approved') {
+        reg.status = 'payment_confirmed'
+      }
+      if (feedback) reg.payment.feedback = feedback
+      await reg.save()
+      return success({ registration: reg })
+    }
+
+    if (action === 'payment_reject') {
+      reg.payment.status = 'rejected'
+      reg.payment.feedback = feedback || 'Payment information was not accepted'
+      await reg.save()
+      return success({ registration: reg })
+    }
+
+    if (action === 'mark_eligible') {
+      reg.status = 'eligible'
+      reg.weighIn.status = 'successful'
+      await reg.save()
+      return success({ registration: reg })
+    }
+
+    if (action === 'mark_ineligible') {
+      reg.status = 'not_eligible'
+      reg.weighIn.status = reg.weighIn?.officialWeightKg ? 'outside_category' : 'requires_review'
+      reg.weighIn.notes = feedback || reg.weighIn?.notes || ''
+      await reg.save()
+      return success({ registration: reg })
+    }
+
+    if (action === 'set_awaiting_weighin') {
+      reg.status = 'awaiting_weighin'
+      await reg.save()
+      return success({ registration: reg })
+    }
+
+    const st = nextStatus(action, reg)
+    if (st) {
+      reg.status = st.status
+      if (feedback) reg.promoterFeedback = feedback
+      await reg.save()
+      return success({ registration: reg })
+    }
+
+    return errorResponse({ message: 'Unknown action', status: 400 })
+  } catch (err) {
+    return errorResponse(err)
+  }
+}

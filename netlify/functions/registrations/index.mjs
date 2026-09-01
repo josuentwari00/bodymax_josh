@@ -1,0 +1,101 @@
+import { connectDB } from '../../shared/db.js'
+import Boxer from '../../shared/models/Boxer.js'
+import Registration from '../../shared/models/Registration.js'
+import Event from '../../shared/models/Event.js'
+import { requireAuth, success, errorResponse } from '../../shared/middleware/auth.js'
+
+export default async (event) => {
+  try {
+    await connectDB()
+    const user = await requireAuth(event)
+
+    const params = event.queryStringParameters || {}
+    const { eventId, clubId, status, id } = params
+    const method = event.httpMethod
+
+    if (method === 'OPTIONS') return success({})
+
+    if (method === 'GET') {
+      if (id) {
+        const reg = await Registration.findById(id)
+          .populate('clubId')
+          .populate('boxerId')
+          .lean()
+        if (!reg) return errorResponse({ message: 'Registration not found', status: 404 })
+        if (user.role === 'club' && String(reg.clubId._id) !== String(user.clubId)) {
+          return errorResponse({ message: 'Forbidden', status: 403 })
+        }
+        return success({ registration: reg })
+      }
+
+      let query = {}
+      if (eventId) query.eventId = eventId
+      if (status) query.status = status
+
+      if (user.role === 'club') {
+        query.clubId = user.clubId
+      } else if (user.role === 'official' && user.officialRole === 'weighin') {
+        if (eventId) query.eventId = eventId
+      } else if (user.role === 'promoter') {
+        if (clubId) query.clubId = clubId
+      }
+
+      const regs = await Registration.find(query)
+        .populate('clubId', 'name')
+        .populate('boxerId')
+        .populate('eventId', 'name')
+        .sort({ createdAt: -1 })
+        .lean()
+      return success({ registrations: regs })
+    }
+
+    if (method === 'POST') {
+      if (user.role !== 'club') {
+        return errorResponse({ message: 'Only clubs can register boxers', status: 403 })
+      }
+      const body = JSON.parse(event.body || '{}')
+      const { eventId: evId, boxerId, category } = body
+
+      if (!evId || !boxerId) {
+        return errorResponse({ message: 'eventId and boxerId are required', status: 400 })
+      }
+
+      const ev = await Event.findById(evId)
+      if (!ev) return errorResponse({ message: 'Event not found', status: 404 })
+      if (!ev.registrationOpen) {
+        return errorResponse({ message: 'Registration is not open for this event', status: 400 })
+      }
+
+      const boxer = await Boxer.findById(boxerId)
+      if (!boxer) return errorResponse({ message: 'Boxer not found', status: 404 })
+      if (String(boxer.clubId) !== String(user.clubId)) {
+        return errorResponse({ message: 'You can only register your own boxers', status: 403 })
+      }
+
+      const existing = await Registration.findOne({ eventId: evId, boxerId })
+      if (existing) {
+        return errorResponse({ message: 'This boxer is already registered for this event', status: 400 })
+      }
+
+      const feeAmount = ev.feeStructure?.type === 'per_boxer' ? ev.feeStructure.amount || 0 : 0
+      const requirePayment = ev.requirePayment && ev.feeStructure?.type !== 'none'
+
+      const reg = await Registration.create({
+        eventId: evId,
+        clubId: user.clubId,
+        boxerId,
+        category,
+        status: 'pending_approval',
+        payment: {
+          status: requirePayment ? 'pending' : 'not_required',
+          amount: feeAmount,
+        },
+      })
+      return success({ registration: reg }, 201)
+    }
+
+    return errorResponse({ message: 'Method not allowed', status: 405 })
+  } catch (err) {
+    return errorResponse(err)
+  }
+}
