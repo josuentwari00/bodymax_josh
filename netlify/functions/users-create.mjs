@@ -1,8 +1,8 @@
 ﻿import bcrypt from 'bcryptjs'
-import { connectDB } from '../_shared/db.js'
-import User from '../_shared/models/User.js'
-import Club from '../_shared/models/Club.js'
-import { requireRole, success, errorResponse } from '../_shared/middleware/auth.js'
+import { connectDB } from './_shared/db.js'
+import User from './_shared/models/User.js'
+import Club from './_shared/models/Club.js'
+import { requireRole, success, errorResponse } from './_shared/middleware/auth.js'
 
 export default async (event) => {
   try {

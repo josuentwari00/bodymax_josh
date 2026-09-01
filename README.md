@@ -34,24 +34,26 @@ bodymax/
 │   │   └── club/       # Dashboard, boxer DB, register for events
 │   ├── utils/api.js    # Authenticated fetch wrapper
 │   └── App.jsx         # Routing
-├── netlify/functions/  # Serverless API endpoints
+├── netlify/functions/  # Serverless API endpoints (one file per endpoint)
 │   ├── _shared/        # Shared code bundled into functions (models, db, auth)
-│   ├── auth/           # login, me
-│   ├── users/          # create (club accounts)
-│   ├── clubs/          # list / detail
-│   ├── events/         # list / create / update
-│   ├── boxers/         # CRUD
-│   ├── registrations/  # list, submit, manage, payment
-│   ├── weighins/       # record
-│   ├── draws/          # generate, get (brackets)
-│   ├── bouts/          # list / schedule
-│   ├── results/        # record (winner advancement)
+│   ├── auth-login.mjs, auth-me.mjs
+│   ├── users-create.mjs
+│   ├── clubs.mjs
+│   ├── events.mjs, events-create.mjs, events-update.mjs
+│   ├── boxers.mjs
+│   ├── registrations.mjs, registrations-manage.mjs, registrations-payment.mjs
+│   ├── weighins-record.mjs
+│   ├── draws-generate.mjs, draws-get.mjs
+│   ├── bouts.mjs
+│   ├── results-record.mjs
 │   ├── dashboard.mjs   # statistics
 │   └── public-events.mjs
 ├── shared/             # Mirrored models used by the local seed script
 ├── scripts/            # seed-promoter.mjs
 └── netlify.toml        # Netlify build/function config
 ```
+
+> **Note on function paths:** Netlify's classic functions expose each file as a flat, dash-named endpoint — `functions/auth-login.mjs` → `/.netlify/functions/auth-login`. The frontend `src/utils/api.js` includes a `PATH_MAP` that translates friendly paths (e.g. `/auth/login`) to these flat endpoints. Do not use nested folders for functions on the default Netlify plan, as those do not map to the URLs the frontend expects.
 
 ## Local Development
 
@@ -102,24 +104,26 @@ The Vite dev server proxies `/.netlify/functions/*` to `http://localhost:8888` (
 
 | Method | Endpoint | Purpose | Access |
 |--------|----------|---------|--------|
-| POST | `/auth/login` | Authenticate | Public |
-| GET | `/auth/me` | Current user | Auth |
-| POST | `/users/create` | Create club account | Promoter |
+| POST | `/auth-login` | Authenticate | Public |
+| GET | `/auth-me` | Current user | Auth |
+| POST | `/users-create` | Create club account | Promoter |
 | GET | `/clubs` | List clubs / own club | Promoter / Club |
 | GET | `/events` | List events | Auth |
-| POST | `/events/create` | Create event | Promoter |
-| PUT/PATCH | `/events/update?id=` | Update event | Promoter |
+| POST | `/events-create` | Create event | Promoter |
+| PUT/PATCH | `/events-update?id=` | Update event | Promoter |
 | GET/POST/PUT/DELETE | `/boxers` | Boxer CRUD | Promoter / Club |
 | GET/POST | `/registrations` | List / submit | Auth / Club |
-| POST | `/registrations/manage?id=` | Approve/reject/confirm | Promoter |
-| PUT | `/registrations/payment?id=` | Submit payment | Club / Promoter |
-| POST | `/weighins/record` | Record official weight | Promoter / Weigh-in official |
-| GET | `/draws/get` | View bracket by round | Auth |
-| POST | `/draws/generate` | Generate bracket from eligible boxers | Promoter |
+| POST | `/registrations-manage?id=` | Approve/reject/confirm | Promoter |
+| PUT | `/registrations-payment?id=` | Submit payment | Club / Promoter |
+| POST | `/weighins-record` | Record official weight | Promoter / Weigh-in official |
+| GET | `/draws-get` | View bracket by round | Auth |
+| POST | `/draws-generate` | Generate bracket from eligible boxers | Promoter |
 | GET/PATCH | `/bouts` | List / schedule bouts | Promoter |
-| POST | `/results/record` | Record result, advance winner | Promoter / Results official |
+| POST | `/results-record` | Record result, advance winner | Promoter / Results official |
 | GET | `/dashboard` | Statistics | Promoter / Club |
 | GET | `/public-events` | Public event listing | Public |
+
+> All endpoints are served under `/.netlify/functions/`. The frontend calls these friendly/flat names directly (see `src/utils/api.js`).
 
 ## Deployment (Netlify)
 
