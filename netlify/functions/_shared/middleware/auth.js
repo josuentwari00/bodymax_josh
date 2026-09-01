@@ -55,26 +55,31 @@ export function requireRole(...roles) {
   }
 }
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+}
+
 export function success(data, status = 200) {
-  return {
-    statusCode: status,
+  return new Response(JSON.stringify(data), {
+    status,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      ...CORS_HEADERS,
     },
-    body: JSON.stringify(data),
-  }
+  })
 }
 
 export function errorResponse(err) {
-  return {
-    statusCode: err.status || 500,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-    },
-    body: JSON.stringify({ message: err.message || 'Internal server error' }),
-  }
+  return new Response(
+    JSON.stringify({ message: err.message || 'Internal server error' }),
+    {
+      status: err.status || 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+    }
+  )
 }
