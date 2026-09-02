@@ -17,6 +17,8 @@ const PATH_MAP = {
   '/draws/get': '/draws-get',
   '/draws/boxer': '/draws-boxer',
   '/results/record': '/results-record',
+  '/role-links': '/role-links',
+  '/portal': '/role-portal',
 }
 
 function normalizePath(path) {

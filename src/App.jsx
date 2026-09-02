@@ -5,6 +5,7 @@ import { Loading } from './components/Loading.jsx'
 import Home from './pages/public/Home.jsx'
 import PublicEvents from './pages/public/PublicEvents.jsx'
 import PublicEventDetail from './pages/public/PublicEventDetail.jsx'
+import RolePortal from './pages/public/RolePortal.jsx'
 import Login from './pages/Login.jsx'
 
 import DashboardLayout from './pages/DashboardLayout.jsx'
@@ -47,6 +48,7 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route path="/events" element={<PublicEvents />} />
       <Route path="/events/:id" element={<PublicEventDetail />} />
+      <Route path="/portal/:token" element={<RolePortal />} />
       <Route path="/login" element={<LoginRoute />} />
 
       <Route

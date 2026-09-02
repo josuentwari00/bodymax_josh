@@ -5,9 +5,36 @@ import { useToast } from '../../context/ToastContext.jsx'
 import { Button } from '../../components/Button.jsx'
 import { Card, CardHeader, CardBody } from '../../components/Card.jsx'
 import { Loading, Empty } from '../../components/Loading.jsx'
-import { Badge } from '../../components/Badge.jsx'
 import { Modal } from '../../components/Modal.jsx'
 import { Input, Select } from '../../components/Field.jsx'
+import { cn } from '../../utils/cn.js'
+
+const STATUS_STYLES = {
+  scheduled: 'bg-blue-100 text-blue-800',
+  ready: 'bg-blue-100 text-blue-800',
+  in_progress: 'bg-amber-100 text-amber-800',
+  walkover: 'bg-amber-100 text-amber-800',
+  completed: 'bg-emerald-100 text-emerald-800',
+  postponed: 'bg-slate-100 text-slate-600',
+  cancelled: 'bg-slate-100 text-slate-600',
+}
+
+function StatusPill({ status }) {
+  const label = {
+    scheduled: 'Scheduled',
+    ready: 'Ready',
+    in_progress: 'In Progress',
+    walkover: 'Walkover',
+    completed: 'Completed',
+    postponed: 'Postponed',
+    cancelled: 'Cancelled',
+  }
+  return (
+    <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium', STATUS_STYLES[status] || 'bg-slate-100 text-slate-700')}>
+      {label[status] || status.replace('_', ' ')}
+    </span>
+  )
+}
 
 export default function Bouts() {
   const { id } = useParams()
@@ -67,7 +94,7 @@ export default function Bouts() {
       <div className="mb-6">
         <button onClick={() => navigate(`/app/events/${id}`)} className="mb-1 text-sm text-brand-600 hover:underline">← Back to Event</button>
         <h1 className="text-2xl font-bold text-slate-900">Bout Schedule</h1>
-        <p className="text-sm text-slate-500">{event.name}</p>
+        <p className="text-sm text-slate-500">{event.name} · single-evening bout schedule</p>
       </div>
 
       {ordered.length === 0 ? (
@@ -85,7 +112,10 @@ export default function Bouts() {
                       <span className="font-medium text-slate-900">
                         {b.boxerAId?.boxerId?.fullName || 'TBD'} vs {b.boxerBId?.boxerId?.fullName || 'TBD'}
                       </span>
-                      <Badge>{b.roundName}</Badge>
+                      <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+                        {b.category?.weight || 'All weights'}
+                        {b.category?.age ? ` / ${b.category.age}` : ''}
+                      </span>
                     </div>
                     <p className="mt-1 text-sm text-slate-500">
                       #{b.boutNumber}
@@ -95,7 +125,7 @@ export default function Bouts() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge tone={b.status === 'completed' ? 'green' : 'blue'}>{b.status}</Badge>
+                    <StatusPill status={b.status} />
                     <Button size="sm" variant="secondary" onClick={() => openEdit(b)}>Schedule</Button>
                   </div>
                 </li>

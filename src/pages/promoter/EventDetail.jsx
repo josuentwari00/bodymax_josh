@@ -9,6 +9,14 @@ import { StatusBadge, Badge } from '../../components/Badge.jsx'
 import { Modal } from '../../components/Modal.jsx'
 import { Input, Textarea, Select } from '../../components/Field.jsx'
 import TagInput from '../../components/TagInput.jsx'
+import { cn } from '../../utils/cn.js'
+
+const PORTAL_ROLES = [
+  { role: 'commentator', title: 'Commentator', desc: 'Fight card and boxer profiles for live commentary.' },
+  { role: 'mc', title: 'MC', desc: 'Fight card only, for the master of ceremonies.' },
+  { role: 'official', title: 'Officials', desc: 'Fight schedule and recorded results for officials.' },
+  { role: 'judge', title: 'Judges', desc: 'Fight schedule and recorded results for the judging panel.' },
+]
 
 export default function EventDetail() {
   const { id } = useParams()
@@ -59,10 +67,13 @@ export default function EventDetail() {
   const [editWeightCategories, setEditWeightCategories] = useState([])
   const [editAgeCategories, setEditAgeCategories] = useState([])
   const [editMethodOptions, setEditMethodOptions] = useState([])
+  const [portals, setPortals] = useState(null)
+  const [portalBusy, setPortalBusy] = useState(null)
 
   const load = () => {
     api(`/events?id=${id}`).then((d) => setEvent(d.event)).catch(() => {})
     api(`/registrations?eventId=${id}`).then((d) => setRegistrations(d.registrations)).catch(() => {})
+    api(`/role-links?eventId=${id}`).then((d) => setPortals(d.links)).catch(() => setPortals([]))
   }
 
   useEffect(load, [id])
@@ -267,7 +278,34 @@ export default function EventDetail() {
     { id: 'registrations', label: `Registrations (${registrations.length})` },
     { id: 'payments', label: 'Payments' },
     { id: 'weighins', label: 'Weigh-In' },
+    { id: 'portals', label: 'Portals' },
   ]
+
+  const portalUrl = (token) => `${window.location.origin}/portal/${token}`
+
+  const copyPortal = async (token) => {
+    try {
+      await navigator.clipboard.writeText(portalUrl(token))
+      toast('Portal link copied')
+    } catch {
+      window.prompt('Copy this link:', portalUrl(token))
+    }
+  }
+
+  const portalAction = async (role, action, confirmText) => {
+    if (confirmText && !window.confirm(confirmText)) return
+    setPortalBusy(role)
+    try {
+      await api(`/role-links?eventId=${id}`, { method: 'POST', body: { role, action } })
+      toast('Portal link updated')
+      const d = await api(`/role-links?eventId=${id}`)
+      setPortals(d.links)
+    } catch (err) {
+      toast(err.message, 'error')
+    } finally {
+      setPortalBusy(null)
+    }
+  }
 
   return (
     <div>
@@ -524,6 +562,71 @@ export default function EventDetail() {
             </ul>
           </div>
         </Card>
+      )}
+
+      {tab === 'portals' && (
+        <div className="grid gap-6">
+          <Card className="p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-base font-semibold">Staff Portals</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Generate a link for each role below, copy it, and send it directly to the person. Nobody needs an
+                  account to open a portal — they are strictly read-only and stop working the moment you disable,
+                  regenerate, or remove the link.
+                </p>
+              </div>
+            </div>
+          </Card>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {PORTAL_ROLES.map((cfg) => {
+              const link = (portals || []).find((p) => p.role === cfg.role)
+              const busy = portalBusy === cfg.role
+              return (
+                <Card key={cfg.role} className="p-6">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <h4 className="font-semibold text-slate-900">{cfg.title} Portal</h4>
+                      <p className="text-sm text-slate-500">{cfg.desc}</p>
+                    </div>
+                    {link && (
+                      <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium', link.active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600')}>
+                        {link.active ? 'Active' : 'Disabled'}
+                      </span>
+                    )}
+                  </div>
+                  {link ? (
+                    <div className="mt-4">
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Share this link</p>
+                      <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                        <span className="min-w-0 flex-1 truncate font-mono text-xs text-slate-600">{portalUrl(link.token)}</span>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button size="sm" variant="secondary" onClick={() => copyPortal(link.token)}>Copy Link</Button>
+                        <Button size="sm" variant="secondary" onClick={() => portalAction(cfg.role, 'regenerate', 'Generate a new link? The old link will stop working immediately.')} disabled={busy}>
+                          {busy ? 'Working…' : 'New Link'}
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={() => portalAction(cfg.role, 'toggle')} disabled={busy}>
+                          {link.active ? 'Disable' : 'Enable'}
+                        </Button>
+                        <Button size="sm" variant="danger" onClick={() => portalAction(cfg.role, 'remove', 'Remove this portal link permanently?')} disabled={busy}>
+                          Remove
+                        </Button>
+                      </div>
+                      {link.lastUsedAt && (
+                        <p className="mt-3 text-xs text-slate-400">Last opened {new Date(link.lastUsedAt).toLocaleString()}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <Button className="mt-4" size="sm" onClick={() => portalAction(cfg.role, 'create')} disabled={busy}>
+                      {busy ? 'Creating…' : 'Create Link'}
+                    </Button>
+                  )}
+                </Card>
+              )
+            })}
+          </div>
+        </div>
       )}
 
       <Modal
