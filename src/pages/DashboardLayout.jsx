@@ -86,37 +86,26 @@ export default function DashboardLayout() {
   const location = useLocation()
 
   const isPromoter = user?.role === 'promoter'
-  const isClub = user?.role === 'club'
   const isOfficial = user?.role === 'official'
-  const title = isPromoter ? 'Promoter' : isClub ? 'Club Portal' : 'Officials'
+  const title = isPromoter ? 'Promoter' : 'Officials'
 
   const handleLogout = () => {
     logout()
     navigate('/login')
   }
 
-  const mobileNavItems = isClub
+  const mobileNavItems = isPromoter
     ? [
         NavItem('/app', 'Home', icons.dashboard, true),
         NavItem('/app/events', 'Events', icons.events),
-        NavItem('/app/club/register', 'Register', icons.register),
-        NavItem('/app/club/boxers', 'Boxers', icons.boxers),
         NavItem('/app/settings', 'Settings', icons.settings),
       ]
-    : isPromoter
-      ? [
-          NavItem('/app', 'Home', icons.dashboard, true),
-          NavItem('/app/events', 'Events', icons.events),
-          NavItem('/app/clubs', 'Clubs', icons.clubs),
-          NavItem('/app/boxers', 'Boxers', icons.boxers),
-          NavItem('/app/settings', 'Settings', icons.settings),
-        ]
-      : [
-          NavItem('/app', 'Home', icons.dashboard, true),
-          NavItem('/app/events', 'Events', icons.events),
-          NavItem('/app/registrations', 'Records', icons.records),
-          NavItem('/app/settings', 'Settings', icons.settings),
-        ]
+    : [
+        NavItem('/app', 'Home', icons.dashboard, true),
+        NavItem('/app/events', 'Events', icons.events),
+        NavItem('/app/registrations', 'Records', icons.records),
+        NavItem('/app/settings', 'Settings', icons.settings),
+      ]
 
   const isActive = (path, end) => (end ? location.pathname === path : location.pathname.startsWith(path))
 
@@ -134,17 +123,7 @@ export default function DashboardLayout() {
           {isPromoter && (
             <>
               <SidebarLink to="/app/events" label="Events" icon={icons.events} active={isActive('/app/events')} />
-              <SidebarLink to="/app/clubs" label="Clubs" icon={icons.clubs} active={isActive('/app/clubs')} />
-              <SidebarLink to="/app/boxers" label="Boxers" icon={icons.boxers} active={isActive('/app/boxers')} />
               <SidebarLink to="/app/registrations" label="Registrations" icon={icons.records} active={isActive('/app/registrations')} />
-            </>
-          )}
-
-          {isClub && (
-            <>
-              <SidebarLink to="/app/events" label="Available Events" icon={icons.events} active={isActive('/app/events')} />
-              <SidebarLink to="/app/club/register" label="Register Boxers" icon={icons.register} active={isActive('/app/club/register')} />
-              <SidebarLink to="/app/club/boxers" label="My Boxers" icon={icons.boxers} active={isActive('/app/club/boxers')} />
             </>
           )}
 

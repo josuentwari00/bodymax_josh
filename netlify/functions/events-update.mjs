@@ -23,9 +23,23 @@ export default async (event) => {
 
     const body = JSON.parse(event.body || '{}')
     await connectDB()
-    const ev = await Event.findByIdAndUpdate(id, body, { new: true, runValidators: true }).lean()
-    if (!ev) {
+
+    const existing = await Event.findById(id)
+    if (!existing) {
       return errorResponse({ message: 'Event not found', status: 404 })
+    }
+
+    if (body.registrationToken !== undefined && body.registrationToken === null) {
+      delete body.registrationToken
+    }
+
+    let ev
+    if (existing.registrationToken) {
+      ev = await Event.findByIdAndUpdate(id, body, { new: true, runValidators: true }).lean()
+    } else {
+      existing.set(body)
+      await existing.save()
+      ev = existing.toObject()
     }
     return success({ event: ev })
   } catch (err) {

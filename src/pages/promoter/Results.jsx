@@ -141,7 +141,7 @@ export default function Results() {
                           <span className="block truncate text-base font-semibold text-slate-900">
                             {a?.boxerId?.fullName || <span className="italic text-slate-400">Bye</span>}
                           </span>
-                          <span className="block truncate text-sm text-slate-500">{a?.clubId?.name || 'Guest'}</span>
+                          <span className="block truncate text-sm text-slate-500">{a?.boxerId?.clubName || a?.clubId?.name || 'Guest'}</span>
                         </span>
                         {aWin && <span className="text-xs font-bold uppercase tracking-wide text-emerald-600">Winner</span>}
                       </div>
@@ -152,7 +152,7 @@ export default function Results() {
                           <span className="block truncate text-base font-semibold text-slate-900">
                             {bb?.boxerId?.fullName || <span className="italic text-slate-400">Bye</span>}
                           </span>
-                          <span className="block truncate text-sm text-slate-500">{bb?.clubId?.name || 'Guest'}</span>
+                          <span className="block truncate text-sm text-slate-500">{bb?.boxerId?.clubName || bb?.clubId?.name || 'Guest'}</span>
                         </span>
                         {bWin && <span className="text-xs font-bold uppercase tracking-wide text-emerald-600">Winner</span>}
                       </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { api } from '../../utils/api.js'
 import { Loading } from '../../components/Loading.jsx'
@@ -50,6 +50,10 @@ function initials(name) {
   return (name || '?').split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()
 }
 
+function clubLabel(r) {
+  return r?.clubName || r?.clubId?.name || 'Guest'
+}
+
 function FightCell({ reg, isWinner, accentSoft }) {
   return (
     <div
@@ -65,7 +69,7 @@ function FightCell({ reg, isWinner, accentSoft }) {
         <span className="block truncate text-[15px] font-semibold text-slate-900">
           {reg?.boxerId?.fullName || <span className="italic text-slate-400">Bye</span>}
         </span>
-        <span className="block truncate text-xs text-slate-500">{reg?.clubId?.name || 'Guest'}</span>
+        <span className="block truncate text-xs text-slate-500">{clubLabel(reg)}</span>
       </span>
       {isWinner && <span className="shrink-0 text-[10px] font-extrabold uppercase tracking-wider text-emerald-600">Winner</span>}
     </div>
@@ -121,9 +125,7 @@ function ScheduleList({ schedule, accentSolid, accentSoft, showResult }) {
 
             <div className="flex flex-col gap-2 px-4 py-3.5 sm:flex-row sm:items-center sm:px-5">
               <FightCell reg={a} isWinner={aWin} accentSoft={accentSoft} />
-              <span className="self-center shrink-0 px-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300 sm:px-1">
-                vs
-              </span>
+              <span className="self-center shrink-0 px-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300 sm:px-1">vs</span>
               <FightCell reg={bb} isWinner={bWin} accentSoft={accentSoft} />
             </div>
 
@@ -141,16 +143,20 @@ function ScheduleList({ schedule, accentSolid, accentSoft, showResult }) {
   )
 }
 
-function BoxerCard({ boxer, accentSolid }) {
+function BoxerCard({ boxer, accentSolid, onClick }) {
   const rec = boxer.boxingRecord || {}
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <button
+      type="button"
+      onClick={onClick}
+      className="group w-full overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+    >
       <div className={cn('h-1.5', accentSolid)} />
       <div className="flex items-center gap-3 px-4 pt-4 sm:px-5">
         {boxer.photoUrl ? (
           <img src={boxer.photoUrl} alt={boxer.fullName} className="h-14 w-14 shrink-0 rounded-full object-cover" />
         ) : (
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-slate-900 text-lg font-bold text-white">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-slate-900 text-lg font-bold text-white transition group-hover:bg-slate-800">
             {initials(boxer.fullName)}
           </span>
         )}
@@ -187,6 +193,158 @@ function BoxerCard({ boxer, accentSolid }) {
           </div>
         </div>
         {boxer.experience && <p className="mt-3 truncate text-xs text-slate-500">{boxer.experience}</p>}
+      </div>
+      <div className={cn('mx-4 mb-4 rounded-xl border border-transparent px-3 py-2 text-center text-xs font-semibold transition sm:mx-5', 'bg-brand-50 text-brand-700 group-hover:bg-brand-600 group-hover:text-white')}>
+        View Full Profile
+      </div>
+    </button>
+  )
+}
+
+function BoxerProfileSheet({ boxer, schedule, onClose, accentSoft }) {
+  if (!boxer) return null
+  const rec = boxer.boxingRecord || {}
+  const total = (rec.wins || 0) + (rec.losses || 0) + (rec.draws || 0)
+
+  const bout = useMemo(() => {
+    if (!schedule || !boxer) return null
+    return schedule.find(
+      (b) => b.boxerAId?._id === boxer._id || b.boxerBId?._id === boxer._id
+    )
+  }, [schedule, boxer])
+
+  const opponentName = useMemo(() => {
+    if (!bout) return null
+    const aId = bout.boxerAId?._id
+    if (aId === boxer._id) return bout.boxerBId?.boxerId?.fullName || 'TBD'
+    return bout.boxerAId?.boxerId?.fullName || 'TBD'
+  }, [bout, boxer])
+
+  const opponentClub = useMemo(() => {
+    if (!bout) return null
+    const aId = bout.boxerAId?._id
+    if (aId === boxer._id) return bout.boxerBId?.boxerId?.clubName || bout.boxerBId?.clubId?.name || 'Guest'
+    return bout.boxerAId?.boxerId?.clubName || bout.boxerAId?.clubId?.name || 'Guest'
+  }, [bout, boxer])
+
+  const isA = bout && bout.boxerAId?._id === boxer._id
+  const boutCat = bout?.category ? [bout.category.weight, bout.category.age, bout.category.gender].filter(Boolean).join(' / ') : ''
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+
+      <div className="relative w-full max-w-lg rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl sm:max-h-[85vh] flex flex-col max-h-[92vh] animate-in slide-in-from-bottom duration-200">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-5 py-3 sm:rounded-t-3xl">
+          <p className="text-sm font-bold text-slate-900">Fighter Profile</p>
+          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-500 transition hover:bg-slate-200 hover:text-slate-700" aria-label="Close">X</button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto overscroll-contain">
+          <div className="px-5 pt-5 pb-6">
+            <div className="flex items-center gap-4">
+              {boxer.photoUrl ? (
+                <img src={boxer.photoUrl} alt={boxer.fullName} className="h-20 w-20 shrink-0 rounded-2xl object-cover shadow-sm" />
+              ) : (
+                <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-2xl font-black text-white">
+                  {initials(boxer.fullName)}
+                </span>
+              )}
+              <div className="min-w-0">
+                <h3 className="truncate text-xl font-extrabold text-slate-900">{boxer.fullName}</h3>
+                <p className="truncate text-sm text-slate-500">{boxer.clubName || 'Guest boxer'}</p>
+                {boxer.nationality && <p className="mt-0.5 text-xs text-slate-400">{boxer.nationality}</p>}
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-1.5">
+              {(boxer.weightCategory || boxer.registeredWeightKg) && (
+                <span className="rounded-full bg-slate-900 px-3 py-1 text-[11px] font-semibold text-white">
+                  {boxer.weightCategory || `${boxer.registeredWeightKg}kg`}
+                </span>
+              )}
+              {boxer.ageCategory && <span className="rounded-full bg-brand-100 px-3 py-1 text-[11px] font-semibold text-brand-700">{boxer.ageCategory}</span>}
+              {boxer.gender && <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-700">{boxer.gender === 'M' ? 'Male' : 'Female'}</span>}
+              {boxer.status && <span className={cn('rounded-full px-3 py-1 text-[11px] font-semibold capitalize', boxer.status === 'eligible' ? 'bg-emerald-100 text-emerald-700' : boxer.status === 'completed' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600')}>{boxer.status.replace('_', ' ')}</span>}
+            </div>
+
+            <div className="mt-6 rounded-2xl bg-slate-50 p-4">
+              <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Boxing Record</p>
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-extrabold text-emerald-600">{rec.wins ?? 0}</span>
+                    <span className="text-xs font-medium text-slate-500">W</span>
+                  </div>
+                  <p className="text-[10px] font-medium uppercase text-slate-400">Wins</p>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-extrabold text-rose-600">{rec.losses ?? 0}</span>
+                    <span className="text-xs font-medium text-slate-500">L</span>
+                  </div>
+                  <p className="text-[10px] font-medium uppercase text-slate-400">Losses</p>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-extrabold text-slate-700">{rec.draws ?? 0}</span>
+                    <span className="text-xs font-medium text-slate-500">D</span>
+                  </div>
+                  <p className="text-[10px] font-medium uppercase text-slate-400">Draws</p>
+                </div>
+              </div>
+              {total > 0 && (
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+                  <div className="flex h-full">
+                    {rec.wins > 0 && <div className="bg-emerald-500" style={{ width: `${(rec.wins / total) * 100}%` }} />}
+                    {rec.losses > 0 && <div className="bg-rose-500" style={{ width: `${(rec.losses / total) * 100}%` }} />}
+                    {rec.draws > 0 && <div className="bg-slate-400" style={{ width: `${(rec.draws / total) * 100}%` }} />}
+                  </div>
+                </div>
+              )}
+              {total > 0 && <p className="mt-1.5 text-center text-[11px] text-slate-400">{total} total bout{total === 1 ? '' : 's'}</p>}
+            </div>
+
+            {boxer.experience && (
+              <div className="mt-4 rounded-2xl bg-slate-50 p-4">
+                <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">Experience</p>
+                <p className="text-sm text-slate-700">{boxer.experience}</p>
+              </div>
+            )}
+
+            {bout && (
+              <div className={cn('mt-4 rounded-2xl border p-4', accentSoft)}>
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">This Event Bout</p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-900">Bout #{bout.boutNumber}</p>
+                    {boutCat && <p className="mt-0.5 text-xs text-slate-500">{boutCat}</p>}
+                  </div>
+                  <StatusPill status={bout.status} />
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                  {bout.ring && <span className="rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-slate-600">Ring {bout.ring}</span>}
+                  {bout.scheduledDate && <span className="rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-slate-600">{fmtDate(bout.scheduledDate)}</span>}
+                  {bout.scheduledTime && <span className="rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-slate-600">{fmtTime(bout.scheduledTime)}</span>}
+                </div>
+                <div className="mt-3 rounded-xl bg-white p-3">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Opponent</p>
+                  <p className="mt-1 font-semibold text-slate-900">{opponentName}</p>
+                  {opponentClub && <p className="text-xs text-slate-500">{opponentClub}</p>}
+                </div>
+                {bout.status === 'completed' && bout.winnerId && (
+                  <div className="mt-3 rounded-xl bg-white p-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Result</p>
+                    <p className="mt-1 font-semibold text-emerald-700">
+                      {bout.winnerId?.boxerId?.fullName} wins by {bout.result?.method || 'Decision'}
+                      {bout.result?.round ? ` in round ${bout.result.round}` : ''}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -247,6 +405,7 @@ const EVENT_STATUS = {
 function PortalShell({ data }) {
   const cfg = ROLES[data.role] || ROLES.official
   const status = EVENT_STATUS[data.event.status] || null
+  const [selectedBoxer, setSelectedBoxer] = useState(null)
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -254,9 +413,7 @@ function PortalShell({ data }) {
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-2 px-4 py-3 sm:px-6">
           <Link to="/" className="flex items-center gap-1.5 text-sm font-extrabold tracking-tight text-slate-900">
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-900 text-[10px] font-black text-white">b</span>
-            <span className="truncate">
-              bodymax<span className="text-brand-600">events</span>
-            </span>
+            <span className="truncate">bodymax<span className="text-brand-600">events</span></span>
           </Link>
           <div className="flex shrink-0 items-center gap-2">
             <span className="hidden rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 sm:inline-flex">{cfg.name}</span>
@@ -303,7 +460,7 @@ function PortalShell({ data }) {
               </SectionTitle>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 sm:gap-4">
                 {(data.boxers || []).map((boxer) => (
-                  <BoxerCard key={boxer._id} boxer={boxer} accentSolid={cfg.accentSolid} />
+                  <BoxerCard key={boxer._id} boxer={boxer} accentSolid={cfg.accentSolid} onClick={() => setSelectedBoxer(boxer)} />
                 ))}
               </div>
             </section>
@@ -338,15 +495,11 @@ function PortalShell({ data }) {
                               {b.boxerAId?.boxerId?.fullName === b.winnerId?.boxerId?.fullName ? b.boxerBId?.boxerId?.fullName : b.boxerAId?.boxerId?.fullName}
                             </p>
                             <p className="mt-0.5 truncate text-xs text-slate-500">
-                              Bout #{b.boutNumber}
-                              {b.result?.method ? ` · ${b.result.method}` : ''}
-                              {b.result?.round ? ` · Round ${b.result.round}` : ''}
+                              Bout #{b.boutNumber}{b.result?.method ? ` · ${b.result.method}` : ''}{b.result?.round ? ` · Round ${b.result.round}` : ''}
                             </p>
                           </div>
                         </div>
-                        <div className="shrink-0 self-start sm:self-auto">
-                          <StatusPill status={b.status} />
-                        </div>
+                        <div className="shrink-0 self-start sm:self-auto"><StatusPill status={b.status} /></div>
                       </li>
                     ))}
                   </ul>
@@ -362,6 +515,15 @@ function PortalShell({ data }) {
           Powered by <span className="font-semibold text-slate-600">bodymax events</span> · This portal is read-only and shared by the promoter.
         </div>
       </footer>
+
+      {data.role === 'commentator' && (
+        <BoxerProfileSheet
+          boxer={selectedBoxer}
+          schedule={data.schedule}
+          accentSoft={cfg.accentSoft}
+          onClose={() => setSelectedBoxer(null)}
+        />
+      )}
     </div>
   )
 }
@@ -374,15 +536,9 @@ export default function RolePortal() {
   useEffect(() => {
     let cancelled = false
     api(`/portal?token=${encodeURIComponent(token)}`)
-      .then((d) => {
-        if (!cancelled) setData(d)
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err.message)
-      })
-    return () => {
-      cancelled = true
-    }
+      .then((d) => { if (!cancelled) setData(d) })
+      .catch((err) => { if (!cancelled) setError(err.message) })
+    return () => { cancelled = true }
   }, [token])
 
   if (data) return <PortalShell data={data} />

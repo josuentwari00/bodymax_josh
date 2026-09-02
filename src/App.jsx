@@ -6,6 +6,7 @@ import Home from './pages/public/Home.jsx'
 import PublicEvents from './pages/public/PublicEvents.jsx'
 import PublicEventDetail from './pages/public/PublicEventDetail.jsx'
 import RolePortal from './pages/public/RolePortal.jsx'
+import EventRegister from './pages/public/EventRegister.jsx'
 import Login from './pages/Login.jsx'
 
 import DashboardLayout from './pages/DashboardLayout.jsx'
@@ -22,9 +23,6 @@ import ClubCreate from './pages/promoter/ClubCreate.jsx'
 import BoxerList from './pages/promoter/BoxerList.jsx'
 import Registrations from './pages/promoter/Registrations.jsx'
 
-import ClubDashboard from './pages/club/Dashboard.jsx'
-import ClubBoxers from './pages/club/Boxers.jsx'
-import ClubRegister from './pages/club/Register.jsx'
 import Settings from './pages/Settings.jsx'
 
 function ProtectedRoute({ children, roles }) {
@@ -49,6 +47,7 @@ export default function App() {
       <Route path="/events" element={<PublicEvents />} />
       <Route path="/events/:id" element={<PublicEventDetail />} />
       <Route path="/portal/:token" element={<RolePortal />} />
+      <Route path="/register/:token" element={<EventRegister />} />
       <Route path="/login" element={<LoginRoute />} />
 
       <Route
@@ -75,9 +74,6 @@ export default function App() {
         <Route path="boxers" element={<ProtectedRoute roles={['promoter']}><BoxerList /></ProtectedRoute>} />
         <Route path="registrations" element={<ProtectedRoute roles={['promoter','official']}><Registrations /></ProtectedRoute>} />
 
-        <Route path="club/boxers" element={<ProtectedRoute roles={['club']}><ClubBoxers /></ProtectedRoute>} />
-        <Route path="club/register" element={<ProtectedRoute roles={['club']}><ClubRegister /></ProtectedRoute>} />
-
         <Route path="settings" element={<Settings />} />
       </Route>
 
@@ -88,6 +84,6 @@ export default function App() {
 
 function RoleHome() {
   const { user } = useAuth()
-  if (user.role === 'club') return <ClubDashboard />
+  if (user.role === 'promoter') return <PromoterDashboard />
   return <PromoterDashboard />
 }

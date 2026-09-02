@@ -14,8 +14,8 @@ function BoutCard({ bout, index }) {
   const b = bout.boxerBId
   const aName = a?.boxerId?.fullName
   const bName = b?.boxerId?.fullName
-  const aClub = a?.clubId?.name
-  const bClub = b?.clubId?.name
+  const aClub = a?.boxerId?.clubName || a?.clubId?.name
+  const bClub = b?.boxerId?.clubName || b?.clubId?.name
   const winnerId = bout.winnerId
 
   const slot = (reg, name, club) => {
@@ -133,7 +133,7 @@ function SelectedPlayer({ r }) {
       <span className="min-w-0">
         <span className="block truncate text-sm font-medium text-slate-900">{r.boxerId?.fullName || 'Boxer'}</span>
         <span className="block truncate text-xs text-slate-500">
-          {r.clubId?.name || 'Guest'}
+          {r.clubName || r.clubId?.name || 'Guest'}
           {r.category?.weight ? ` · ${r.category.weight}` : ''}
           {r.category?.age ? ` · ${r.category.age}` : ''}
         </span>
@@ -495,7 +495,7 @@ export default function Draws() {
                         <option value="">— Bye / empty —</option>
                         {available([p.a]).map((r) => (
                           <option key={r._id} value={r._id}>
-                            {r.boxerId?.fullName || 'Boxer'} — {r.clubId?.name || 'Guest'}
+                            {r.boxerId?.fullName || 'Boxer'} — {r.clubName || r.clubId?.name || 'Guest'}
                             {r.category?.weight ? ` (${r.category.weight})` : ''}
                           </option>
                         ))}
@@ -509,7 +509,7 @@ export default function Draws() {
                         <option value="">— Bye / empty —</option>
                         {available([p.b]).map((r) => (
                           <option key={r._id} value={r._id}>
-                            {r.boxerId?.fullName || 'Boxer'} — {r.clubId?.name || 'Guest'}
+                            {r.boxerId?.fullName || 'Boxer'} — {r.clubName || r.clubId?.name || 'Guest'}
                             {r.category?.weight ? ` (${r.category.weight})` : ''}
                           </option>
                         ))}

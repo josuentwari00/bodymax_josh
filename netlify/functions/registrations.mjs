@@ -97,12 +97,11 @@ export default async (event) => {
         return errorResponse({ message: 'Select a valid gender category for this event', status: 400 })
       }
 
-      const feeAmount = ev.feeStructure?.type === 'per_boxer' ? ev.feeStructure.amount || 0 : 0
-      const requirePayment = ev.requirePayment && ev.feeStructure?.type !== 'none'
-
       const reg = await Registration.create({
         eventId: evId,
         clubId: user.clubId,
+        clubName: body.clubName || '',
+        numberOfBouts: Number(body.numberOfBouts) || 1,
         boxerId,
         category: {
           weight: cat.weight || '',
@@ -110,10 +109,6 @@ export default async (event) => {
           gender,
         },
         status: 'pending_approval',
-        payment: {
-          status: requirePayment ? 'pending' : 'not_required',
-          amount: feeAmount,
-        },
       })
       return success({ registration: reg }, 201)
     }

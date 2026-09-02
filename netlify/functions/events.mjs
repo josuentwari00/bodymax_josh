@@ -26,11 +26,15 @@ export default async (event) => {
     const user = await requireAuth(event)
 
     if (id) {
-      const ev = await Event.findById(id).lean()
+      const ev = await Event.findById(id)
       if (!ev) {
         return errorResponse({ message: 'Event not found', status: 404 })
       }
-      return success({ event: ev })
+      if (!ev.registrationToken) {
+        ev.registrationToken = undefined
+        await ev.save()
+      }
+      return success({ event: ev.toObject() })
     }
 
     let query = {}

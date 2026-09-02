@@ -7,7 +7,7 @@ import { Card } from '../../components/Card.jsx'
 import { Loading, Empty, Spinner } from '../../components/Loading.jsx'
 import { StatusBadge, Badge } from '../../components/Badge.jsx'
 import { Modal } from '../../components/Modal.jsx'
-import { Input, Textarea, Select } from '../../components/Field.jsx'
+import { Input, Textarea } from '../../components/Field.jsx'
 import TagInput from '../../components/TagInput.jsx'
 import { cn } from '../../utils/cn.js'
 
@@ -33,18 +33,6 @@ export default function EventDetail() {
   const [weighReg, setWeighReg] = useState(null)
   const [weighWeight, setWeighWeight] = useState('')
   const [weighNotes, setWeighNotes] = useState('')
-  const [setupOpen, setSetupOpen] = useState(false)
-  const [setup, setSetup] = useState({
-    bankName: '',
-    accountName: '',
-    accountNumber: '',
-    paymentInstructions: '',
-    acceptedMethods: [],
-    contactName: '',
-    contactPhone: '',
-    contactEmail: '',
-  })
-  const [methodText, setMethodText] = useState('')
   const [editOpen, setEditOpen] = useState(false)
   const [editForm, setEditForm] = useState({
     name: '',
@@ -57,16 +45,11 @@ export default function EventDetail() {
     weighInDate: '',
     rules: '',
     registrationRequirements: '',
-    feeType: 'none',
-    feeAmount: '',
-    currency: '',
-    requirePayment: false,
     requireWeighIn: true,
     public: false,
   })
   const [editWeightCategories, setEditWeightCategories] = useState([])
   const [editAgeCategories, setEditAgeCategories] = useState([])
-  const [editMethodOptions, setEditMethodOptions] = useState([])
   const [portals, setPortals] = useState(null)
   const [portalBusy, setPortalBusy] = useState(null)
 
@@ -137,59 +120,6 @@ export default function EventDetail() {
     }
   }
 
-  const openSetup = () => {
-    setSetup({
-      bankName: event.paymentAccount?.bankName || '',
-      accountName: event.paymentAccount?.accountName || '',
-      accountNumber: event.paymentAccount?.accountNumber || '',
-      paymentInstructions: event.paymentAccount?.paymentInstructions || '',
-      acceptedMethods: event.paymentAccount?.acceptedMethods || [],
-      contactName: event.promoterContact?.name || '',
-      contactPhone: event.promoterContact?.phone || '',
-      contactEmail: event.promoterContact?.email || '',
-    })
-    setMethodText('')
-    setSetupOpen(true)
-  }
-
-  const addMethod = () => {
-    const v = methodText.trim()
-    if (v && !setup.acceptedMethods.includes(v)) {
-      setSetup({ ...setup, acceptedMethods: [...setup.acceptedMethods, v] })
-      setMethodText('')
-    }
-  }
-
-  const saveSetup = async () => {
-    setBusy(true)
-    try {
-      await api(`/events/update?id=${id}`, {
-        method: 'PATCH',
-        body: {
-          paymentAccount: {
-            bankName: setup.bankName,
-            accountName: setup.accountName,
-            accountNumber: setup.accountNumber,
-            paymentInstructions: setup.paymentInstructions,
-            acceptedMethods: setup.acceptedMethods,
-          },
-          promoterContact: {
-            name: setup.contactName,
-            phone: setup.contactPhone,
-            email: setup.contactEmail,
-          },
-        },
-      })
-      toast('Payment account & contact updated')
-      setSetupOpen(false)
-      load()
-    } catch (err) {
-      toast(err.message, 'error')
-    } finally {
-      setBusy(false)
-    }
-  }
-
   const openEdit = () => {
     setEditForm({
       name: event.name || '',
@@ -202,16 +132,11 @@ export default function EventDetail() {
       weighInDate: event.weighInDate ? String(event.weighInDate).slice(0, 10) : '',
       rules: event.rules || '',
       registrationRequirements: event.registrationRequirements || '',
-      feeType: event.feeStructure?.type || 'none',
-      feeAmount: event.feeStructure?.amount ?? '',
-      currency: event.feeStructure?.currency || '',
-      requirePayment: event.requirePayment || false,
       requireWeighIn: event.requireWeighIn ?? true,
       public: event.public || false,
     })
     setEditWeightCategories([...(event.weightCategories || [])])
     setEditAgeCategories([...(event.ageCategories || [])])
-    setEditMethodOptions([...(event.paymentAccount?.acceptedMethods || [])])
     setEditOpen(true)
   }
 
@@ -233,18 +158,8 @@ export default function EventDetail() {
           registrationRequirements: editForm.registrationRequirements,
           weightCategories: editWeightCategories,
           ageCategories: editAgeCategories,
-          requirePayment: editForm.requirePayment,
           requireWeighIn: editForm.requireWeighIn,
           public: editForm.public,
-          feeStructure: {
-            type: editForm.requirePayment ? editForm.feeType : 'none',
-            amount: Number(editForm.feeAmount) || 0,
-            currency: editForm.currency,
-          },
-          paymentAccount: {
-            ...(event.paymentAccount || {}),
-            acceptedMethods: editMethodOptions,
-          },
         },
       })
       toast('Event details updated')
@@ -276,10 +191,20 @@ export default function EventDetail() {
   const tabs = [
     { id: 'overview', label: 'Overview' },
     { id: 'registrations', label: `Registrations (${registrations.length})` },
-    { id: 'payments', label: 'Payments' },
     { id: 'weighins', label: 'Weigh-In' },
     { id: 'portals', label: 'Portals' },
   ]
+
+  const registrationUrl = `${window.location.origin}/register/${event.registrationToken}`
+
+  const copyRegistration = async () => {
+    try {
+      await navigator.clipboard.writeText(registrationUrl)
+      toast('Registration link copied')
+    } catch {
+      window.prompt('Copy this link:', registrationUrl)
+    }
+  }
 
   const portalUrl = (token) => `${window.location.origin}/portal/${token}`
 
@@ -338,11 +263,6 @@ export default function EventDetail() {
               <option value="completed">Completed</option>
               <option value="archived">Archived</option>
             </select>
-            {event.registrationOpen ? (
-              <Button variant="secondary" onClick={() => toggleRegistration(false)}>Close Registration</Button>
-            ) : (
-              <Button onClick={() => toggleRegistration(true)}>Open Registration</Button>
-            )}
             <Button variant="danger" onClick={handleDelete}>Delete Event</Button>
           </div>
         </div>
@@ -390,58 +310,28 @@ export default function EventDetail() {
                   {event.ageCategories?.length ? event.ageCategories.map((c) => <Badge key={c}>{c}</Badge>) : <span>None</span>}
                 </div>
               </div>
-              <div>
-                <p className="text-slate-500">Fees</p>
-                <p>{event.requirePayment ? `${event.feeStructure?.type === 'per_club' ? 'Per club' : 'Per boxer'}: ${event.feeStructure?.amount} ${event.feeStructure?.currency}` : 'No fee'}</p>
-              </div>
             </div>
           </Card>
 
           <Card className="p-6 lg:col-span-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-semibold">Payment Account & Promoter Contact</h3>
-                {event.requirePayment ? (
-                  <StatusBadge status={event.paymentAccount?.accountNumber ? 'approved' : 'pending'} />
-                ) : (
-                  <Badge tone="slate">No fee required</Badge>
-                )}
-              </div>
-              <Button size="sm" variant="secondary" onClick={openSetup}>Edit</Button>
+              <h3 className="text-base font-semibold">Registration Link</h3>
             </div>
-            {event.requirePayment ? (
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Bank / M-Pesa Account</p>
-                  <dl className="mt-2 space-y-1.5 text-sm">
-                    <div className="flex justify-between"><dt className="text-slate-500">Bank</dt><dd className="font-medium text-slate-900">{event.paymentAccount?.bankName || '—'}</dd></div>
-                    <div className="flex justify-between"><dt className="text-slate-500">Account Name</dt><dd className="font-medium text-slate-900">{event.paymentAccount?.accountName || '—'}</dd></div>
-                    <div className="flex justify-between"><dt className="text-slate-500">Account No.</dt><dd className="font-medium text-slate-900">{event.paymentAccount?.accountNumber || '—'}</dd></div>
-                    {event.paymentAccount?.acceptedMethods?.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 pt-2">{[...event.paymentAccount.acceptedMethods].map((m) => <Badge key={m} tone="blue">{m}</Badge>)}</div>
-                    )}
-                  </dl>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Promoter Contact</p>
-                  <dl className="mt-2 space-y-1.5 text-sm">
-                    <div className="flex justify-between"><dt className="text-slate-500">Name</dt><dd className="font-medium text-slate-900">{event.promoterContact?.name || '—'}</dd></div>
-                    <div className="flex justify-between"><dt className="text-slate-500">Phone</dt><dd className="font-medium text-slate-900">{event.promoterContact?.phone || '—'}</dd></div>
-                    <div className="flex justify-between"><dt className="text-slate-500">Email</dt><dd className="font-medium text-brand-700">{event.promoterContact?.email || '—'}</dd></div>
-                  </dl>
-                </div>
-                {event.paymentAccount?.paymentInstructions && (
-                  <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 sm:col-span-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Payment Instructions</p>
-                    <p className="mt-1 text-sm text-blue-900">{event.paymentAccount.paymentInstructions}</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="mt-3 text-sm text-slate-500">
-                This event does not require a registration fee, so no payment account is shown to clubs.
-              </p>
-            )}
+            <p className="mt-1 text-sm text-slate-500">
+              Share this link with any team or manager. Anyone who opens it can register boxers (name, age, weight, bouts,
+              club) for this event without an account or payment.
+            </p>
+            <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <span className="min-w-0 flex-1 truncate font-mono text-xs text-slate-600">{registrationUrl}</span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" variant="secondary" onClick={copyRegistration}>Copy Link</Button>
+              {event.registrationOpen ? (
+                <Button size="sm" variant="secondary" onClick={() => toggleRegistration(false)}>Close Registration</Button>
+              ) : (
+                <Button size="sm" onClick={() => toggleRegistration(true)}>Open Registration</Button>
+              )}
+            </div>
           </Card>
 
           {event.rules && (
@@ -457,7 +347,7 @@ export default function EventDetail() {
         <Card>
           <div className="p-0">
             {registrations.length === 0 ? (
-              <Empty title="No registrations yet" message="Registrations from clubs will appear here." />
+              <Empty title="No registrations yet" message="Share the registration link to get boxers signed up." />
             ) : (
               <ul className="divide-y divide-slate-200">
                 {registrations.map((r) => (
@@ -465,7 +355,7 @@ export default function EventDetail() {
                     <div>
                       <p className="font-medium text-slate-900">{r.boxerId?.fullName || 'Boxer'}</p>
                       <p className="text-sm text-slate-500">
-                        {r.clubId?.name}
+                        {r.clubName || r.clubId?.name}
                         {r.boxerId?.weightCategory && ` · ${r.boxerId.weightCategory}`}
                       </p>
                       {r.promoterFeedback && <p className="mt-1 text-xs text-slate-800">Feedback: {r.promoterFeedback}</p>}
@@ -477,40 +367,6 @@ export default function EventDetail() {
                           <Button size="sm" onClick={() => { setActionReg(r); setAction('approve') }}>Approve</Button>
                           <Button size="sm" variant="secondary" onClick={() => { setActionReg(r); setAction('needs_correction') }}>Request Change</Button>
                           <Button size="sm" variant="danger" onClick={() => { setActionReg(r); setAction('reject') }}>Reject</Button>
-                        </>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </Card>
-      )}
-
-      {tab === 'payments' && (
-        <Card>
-          <div className="p-0">
-            {registrations.filter((r) => r.payment?.status !== 'not_required').length === 0 ? (
-              <Empty title="No payments" message="This event does not require payments, or none have been submitted." />
-            ) : (
-              <ul className="divide-y divide-slate-200">
-                {registrations.filter((r) => r.payment?.status !== 'not_required').map((r) => (
-                  <li key={r._id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-                    <div>
-                      <p className="font-medium text-slate-900">{r.boxerId?.fullName} — {r.clubId?.name}</p>
-                      <p className="text-sm text-slate-500">
-                        Amount: {r.payment?.amount} {event.feeStructure?.currency || ''}
-                        {r.payment?.reference && ` · Ref: ${r.payment.reference}`}
-                        {r.payment?.method && ` · ${r.payment.method}`}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status={r.payment?.status} />
-                      {r.payment?.status === 'submitted' && (
-                        <>
-                          <Button size="sm" onClick={() => { setActionReg(r); setAction('payment_confirm') }}>Confirm</Button>
-                          <Button size="sm" variant="danger" onClick={() => { setActionReg(r); setAction('payment_reject') }}>Reject</Button>
                         </>
                       )}
                     </div>
@@ -534,7 +390,7 @@ export default function EventDetail() {
                     <div>
                       <p className="font-medium text-slate-900">{r.boxerId?.fullName}</p>
                       <p className="text-sm text-slate-500">
-                        {r.clubId?.name}
+                        {r.clubName || r.clubId?.name}
                         {r.weighIn?.officialWeightKg && ` · Official weight: ${r.weighIn.officialWeightKg}kg`}
                         {r.weighIn?.weighedAt && ` · ${new Date(r.weighIn.weighedAt).toLocaleString()}`}
                       </p>
@@ -649,7 +505,7 @@ export default function EventDetail() {
       <Modal
         open={!!actionReg}
         onClose={() => setActionReg(null)}
-        title={action === 'approve' ? 'Approve Registration' : action === 'reject' ? 'Reject Registration' : action === 'needs_correction' ? 'Request Correction' : action === 'payment_confirm' ? 'Confirm Payment' : action === 'payment_reject' ? 'Reject Payment' : 'Action'}
+        title={action === 'approve' ? 'Approve Registration' : action === 'reject' ? 'Reject Registration' : action === 'needs_correction' ? 'Request Correction' : 'Action'}
         footer={
           <>
             <Button variant="secondary" onClick={() => setActionReg(null)}>Cancel</Button>
@@ -658,65 +514,10 @@ export default function EventDetail() {
         }
       >
         <p className="text-sm text-slate-600">
-          {actionReg?.boxerId?.fullName} — {actionReg?.clubId?.name}
+          {actionReg?.boxerId?.fullName} — {actionReg?.clubName || actionReg?.clubId?.name}
         </p>
         <div className="mt-4">
           <Textarea label="Feedback (optional)" value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={3} placeholder="Optional note to the club" />
-        </div>
-      </Modal>
-
-      <Modal
-        open={setupOpen}
-        onClose={() => setSetupOpen(false)}
-        title="Payment Account & Promoter Contact"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setSetupOpen(false)}>Cancel</Button>
-            <Button onClick={saveSetup} disabled={busy}>{busy ? <Spinner className="h-4 w-4 border-white" /> : 'Save Changes'}</Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <div>
-            <p className="mb-2 text-sm font-semibold text-slate-900">Bank / Mobile Money Account</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Input label="Bank Name" value={setup.bankName} onChange={(e) => setSetup({ ...setup, bankName: e.target.value })} placeholder="e.g. Equity Bank" />
-              <Input label="Account Name" value={setup.accountName} onChange={(e) => setSetup({ ...setup, accountName: e.target.value })} placeholder="Account holder" />
-              <Input label="Account Number" value={setup.accountNumber} onChange={(e) => setSetup({ ...setup, accountNumber: e.target.value })} placeholder="Account / M-Pesa no." />
-            </div>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Accepted Payment Methods</label>
-            <div className="flex gap-2">
-              <input
-                value={methodText}
-                onChange={(e) => setMethodText(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addMethod() } }}
-                placeholder="e.g. M-Pesa, Bank Transfer"
-                className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
-              />
-              <Button type="button" variant="secondary" onClick={addMethod}>Add</Button>
-            </div>
-            {setup.acceptedMethods.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {setup.acceptedMethods.map((m) => (
-                  <span key={m} className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-800">
-                    {m}
-                    <button type="button" onClick={() => setSetup({ ...setup, acceptedMethods: setup.acceptedMethods.filter((x) => x !== m) })} className="text-blue-400 hover:text-blue-900">×</button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-          <Textarea label="Payment Instructions" value={setup.paymentInstructions} onChange={(e) => setSetup({ ...setup, paymentInstructions: e.target.value })} rows={2} placeholder="e.g. Use the boxer's name as the payment reference" />
-          <div className="border-t border-slate-200 pt-4">
-            <p className="mb-2 text-sm font-semibold text-slate-900">Promoter Contact (for payment confirmation)</p>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Input label="Name" value={setup.contactName} onChange={(e) => setSetup({ ...setup, contactName: e.target.value })} placeholder="Full name" />
-              <Input label="Phone / WhatsApp" value={setup.contactPhone} onChange={(e) => setSetup({ ...setup, contactPhone: e.target.value })} placeholder="+254 7XX XXX XXX" />
-              <Input label="Email" value={setup.contactEmail} onChange={(e) => setSetup({ ...setup, contactEmail: e.target.value })} placeholder="promoter@example.com" />
-            </div>
-          </div>
         </div>
       </Modal>
 
@@ -751,22 +552,8 @@ export default function EventDetail() {
           <Textarea label="Competition Rules" value={editForm.rules} onChange={(e) => setEditForm({ ...editForm, rules: e.target.value })} rows={2} />
           <Textarea label="Registration Requirements" value={editForm.registrationRequirements} onChange={(e) => setEditForm({ ...editForm, registrationRequirements: e.target.value })} rows={2} />
           <div className="border-t border-slate-200 pt-4">
-            <p className="mb-2 text-sm font-semibold text-slate-900">Fees & Settings</p>
+            <p className="mb-2 text-sm font-semibold text-slate-900">Settings</p>
             <div className="space-y-3">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" checked={editForm.requirePayment} onChange={(e) => setEditForm({ ...editForm, requirePayment: e.target.checked })} className="h-4 w-4 rounded" />
-                <span className="text-sm text-slate-700">Require registration payment</span>
-              </label>
-              {editForm.requirePayment && (
-                <div className="grid gap-4 rounded-lg bg-slate-50 p-4 sm:grid-cols-3">
-                  <Select label="Fee Type" value={editForm.feeType} onChange={(e) => setEditForm({ ...editForm, feeType: e.target.value })}>
-                    <option value="per_boxer">Per Boxer</option>
-                    <option value="per_club">Per Club</option>
-                  </Select>
-                  <Input label="Amount" type="number" value={editForm.feeAmount} onChange={(e) => setEditForm({ ...editForm, feeAmount: e.target.value })} placeholder="0.00" />
-                  <Input label="Currency" value={editForm.currency} onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })} placeholder="e.g. $, GBP" />
-                </div>
-              )}
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={editForm.requireWeighIn} onChange={(e) => setEditForm({ ...editForm, requireWeighIn: e.target.checked })} className="h-4 w-4 rounded" />
                 <span className="text-sm text-slate-700">Require weigh-in before competition</span>

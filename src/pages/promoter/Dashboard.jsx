@@ -53,7 +53,6 @@ export default function PromoterDashboard() {
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Total Registrations" value={data.registrationCount} to="/app/registrations" tone="blue" />
         <Stat label="Pending Approvals" value={data.pendingRegistrations} to="/app/registrations" tone="red" />
-        <Stat label="Pending Payments" value={data.pendingPayments} to="/app/registrations" tone="yellow" />
         <Stat label="Successfully Weighed" value={data.weighedCount} to="/app/registrations" tone="green" />
       </div>
 

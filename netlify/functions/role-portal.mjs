@@ -67,7 +67,7 @@ export default async (event) => {
       payload.boxers = regs.map((r) => ({
         _id: r._id,
         fullName: r.boxerId?.fullName || '',
-        clubName: r.clubId?.name || null,
+        clubName: r.clubName || r.clubId?.name || null,
         gender: r.boxerId?.gender || r.category?.gender || null,
         weightCategory: r.category?.weight || r.boxerId?.weightCategory || '',
         ageCategory: r.category?.age || r.boxerId?.ageCategory || '',

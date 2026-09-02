@@ -8,12 +8,8 @@ const RegistrationSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    clubId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Club',
-      default: null,
-      index: true,
-    },
+    clubName: { type: String, trim: true, default: '' },
+    numberOfBouts: { type: Number, default: 1, min: 1 },
     boxerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Boxer',
@@ -33,8 +29,6 @@ const RegistrationSchema = new mongoose.Schema(
         'pending_approval',
         'needs_correction',
         'approved',
-        'payment_pending',
-        'payment_confirmed',
         'awaiting_weighin',
         'weighed',
         'eligible',
@@ -47,22 +41,6 @@ const RegistrationSchema = new mongoose.Schema(
     },
 
     promoterFeedback: { type: String, default: '' },
-
-    payment: {
-      status: {
-        type: String,
-        enum: ['not_required', 'pending', 'submitted', 'confirmed', 'rejected'],
-        default: 'not_required',
-      },
-      amount: { type: Number, default: 0 },
-      method: { type: String, default: '' },
-      reference: { type: String, default: '' },
-      paidAt: { type: Date, default: null },
-      proofUrl: { type: String, default: '' },
-      submittedAt: { type: Date, default: null },
-      confirmedAt: { type: Date, default: null },
-      feedback: { type: String, default: '' },
-    },
 
     weighIn: {
       status: {

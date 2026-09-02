@@ -19,6 +19,7 @@ const PATH_MAP = {
   '/results/record': '/results-record',
   '/role-links': '/role-links',
   '/portal': '/role-portal',
+  '/event-register': '/event-register',
 }
 
 function normalizePath(path) {

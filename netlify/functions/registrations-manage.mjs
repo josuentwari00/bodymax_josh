@@ -8,9 +8,7 @@ function nextStatus(action, reg) {
   switch (action) {
     case 'approve':
       return {
-        status: reg.payment?.status === 'pending' || reg.payment?.status === 'submitted'
-          ? 'payment_pending'
-          : 'approved',
+        status: 'approved',
         promoterFeedback: '',
       }
     case 'needs_correction':
@@ -46,24 +44,6 @@ export default async (event) => {
       const st = nextStatus('approve', reg)
       reg.status = st.status
       if (feedback) reg.promoterFeedback = feedback
-      await reg.save()
-      return success({ registration: reg })
-    }
-
-    if (action === 'payment_confirm') {
-      reg.payment.status = 'confirmed'
-      reg.payment.confirmedAt = new Date()
-      if (reg.status === 'payment_pending' || reg.status === 'approved') {
-        reg.status = 'payment_confirmed'
-      }
-      if (feedback) reg.payment.feedback = feedback
-      await reg.save()
-      return success({ registration: reg })
-    }
-
-    if (action === 'payment_reject') {
-      reg.payment.status = 'rejected'
-      reg.payment.feedback = feedback || 'Payment information was not accepted'
       await reg.save()
       return success({ registration: reg })
     }

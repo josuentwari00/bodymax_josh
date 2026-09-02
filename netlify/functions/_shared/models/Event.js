@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import crypto from 'crypto'
 
 const EventSchema = new mongoose.Schema(
   {
@@ -22,32 +23,8 @@ const EventSchema = new mongoose.Schema(
     rules: { type: String, default: '' },
     registrationRequirements: { type: String, default: '' },
 
-    feeStructure: {
-      type: {
-        type: String,
-        enum: ['none', 'per_boxer', 'per_club'],
-        default: 'none',
-      },
-      amount: { type: Number, default: 0 },
-      currency: { type: String, default: '' },
-      notes: { type: String, default: '' },
-    },
+    registrationToken: { type: String, unique: true, sparse: true },
 
-    paymentAccount: {
-      bankName: { type: String, default: '' },
-      accountName: { type: String, default: '' },
-      accountNumber: { type: String, default: '' },
-      paymentInstructions: { type: String, default: '' },
-      acceptedMethods: [{ type: String }],
-    },
-
-    promoterContact: {
-      name: { type: String, default: '' },
-      phone: { type: String, default: '' },
-      email: { type: String, default: '' },
-    },
-
-    requirePayment: { type: Boolean, default: false },
     requireWeighIn: { type: Boolean, default: true },
 
     registrationOpen: { type: Boolean, default: false },
@@ -69,5 +46,12 @@ const EventSchema = new mongoose.Schema(
   },
   { timestamps: true }
 )
+
+EventSchema.pre('save', function (next) {
+  if (!this.registrationToken) {
+    this.registrationToken = crypto.randomBytes(16).toString('hex')
+  }
+  next()
+})
 
 export default mongoose.models.Event || mongoose.model('Event', EventSchema)

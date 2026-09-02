@@ -58,16 +58,15 @@ export default async (event) => {
         gender: gender || registration.category?.gender || '',
       }
       registration.status = 'eligible'
-      registration.payment.status = 'not_required'
       await registration.save()
     } else {
       registration = await Registration.create({
         eventId,
-        clubId: null,
+        clubName: body.clubName || '',
+        numberOfBouts: Number(body.numberOfBouts) || 1,
         boxerId: boxer._id,
         category: { weight, age, gender },
         status: 'eligible',
-        payment: { status: 'not_required', amount: 0 },
       })
     }
 

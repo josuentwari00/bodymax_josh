@@ -12,26 +12,20 @@ export default async (event) => {
     if (event.httpMethod !== 'POST') return errorResponse({ message: 'Method not allowed', status: 405 })
 
     const body = JSON.parse(event.body || '{}')
-    const { clubId, eventId, action } = body
-    if (!clubId) return errorResponse({ message: 'clubId required', status: 400 })
+    const { eventId, action, clubName } = body
 
     if (action !== 'club_confirm') {
       return errorResponse({ message: 'Unknown action', status: 400 })
     }
 
     await connectDB()
-    const query = { clubId, 'payment.status': { $in: ['pending', 'submitted'] } }
+    const query = { status: { $in: ['pending_approval', 'approved'] } }
+    if (clubName) query.clubName = clubName
     if (eventId) query.eventId = eventId
 
     const regs = await Registration.find(query)
-    const now = new Date()
     for (const reg of regs) {
-      reg.payment.status = 'confirmed'
-      reg.payment.confirmedAt = now
-      reg.payment.feedback = ''
-      if (['pending_approval', 'approved', 'payment_pending'].includes(reg.status)) {
-        reg.status = 'payment_confirmed'
-      }
+      reg.status = 'approved'
       await reg.save()
     }
     return success({ confirmed: regs.length })
