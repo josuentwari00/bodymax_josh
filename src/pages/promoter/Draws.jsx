@@ -51,24 +51,35 @@ function BracketView({ byRound }) {
 const selectClass =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500'
 
-function boxerLabel(r) {
-  if (!r) return ''
-  const name = r.boxerId?.fullName || 'Boxer'
-  const club = r.clubId?.name || 'Guest'
-  const cat = [r.category?.weight, r.category?.age].filter(Boolean).join(' / ')
-  return `${name} — ${club}${cat ? ` (${cat})` : ''}`
-}
-
 function Stat({ label, value, tone = 'slate' }) {
   const tones = {
     slate: 'border-slate-200 bg-white',
     blue: 'border-blue-200 bg-blue-50',
     amber: 'border-amber-200 bg-amber-50',
+    emerald: 'border-emerald-200 bg-emerald-50',
   }
   return (
     <div className={cn('rounded-xl border px-3 py-2.5 text-center', tones[tone])}>
       <p className="text-2xl font-bold text-slate-900">{value}</p>
       <p className="text-xs font-medium text-slate-500">{label}</p>
+    </div>
+  )
+}
+
+function SelectedPlayer({ r }) {
+  if (!r) return null
+  const initials = (r.boxerId?.fullName || '?').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+  return (
+    <div className="mt-1.5 flex items-center gap-2 rounded-lg bg-slate-50 px-2 py-1.5">
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">{initials}</span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-medium text-slate-900">{r.boxerId?.fullName || 'Boxer'}</span>
+        <span className="block truncate text-xs text-slate-500">
+          {r.clubId?.name || 'Guest'}
+          {r.category?.weight ? ` · ${r.category.weight}` : ''}
+          {r.category?.age ? ` · ${r.category.age}` : ''}
+        </span>
+      </span>
     </div>
   )
 }
@@ -86,6 +97,7 @@ export default function Draws() {
   const [bouts, setBouts] = useState(null)
 
   const [manualOpen, setManualOpen] = useState(false)
+  const [editMode, setEditMode] = useState(false)
   const [manualPairs, setManualPairs] = useState([])
   const [building, setBuilding] = useState(false)
   const [addBoxerOpen, setAddBoxerOpen] = useState(false)
@@ -134,13 +146,27 @@ export default function Draws() {
 
   const ageCats = event.ageCategories || []
   const showAgeFilter = ageCats.length > 0
+  const byId = new Map(eligible.map((r) => [r._id, r]))
+
+  // Boxers already placed in this category's existing draw (round 1 assignments)
+  const drawnIds = new Set(
+    (bouts || [])
+      .filter((b) => b.round === 1)
+      .flatMap((b) => [b.boxerAId?._id, b.boxerBId?._id])
+      .filter(Boolean)
+      .map(String)
+  )
 
   const openManual = () => {
-    const r1 = (bouts || [])
-      .filter((b) => b.round === 1)
-      .sort((a, b) => a.bracketPosition - b.bracketPosition)
-      .map((b) => ({ a: b.boxerAId?._id || '', b: b.boxerBId?._id || '' }))
+    const hasExisting = !!hasDraw
+    const r1 = hasExisting
+      ? (bouts || [])
+          .filter((b) => b.round === 1)
+          .sort((a, b) => a.bracketPosition - b.bracketPosition)
+          .map((b) => ({ a: b.boxerAId?._id || '', b: b.boxerBId?._id || '' }))
+      : []
     setManualPairs(r1.length ? r1 : [{ a: '', b: '' }])
+    setEditMode(hasExisting)
     setAddForm({ fullName: '', gender: '', weight: weight || '', age: age || '' })
     setAddBoxerOpen(false)
     setManualOpen(true)
@@ -149,7 +175,14 @@ export default function Draws() {
   const usedIds = () => manualPairs.flatMap((p) => [p.a, p.b]).filter(Boolean)
   const assignedCount = usedIds().length
   const remainingCount = eligible.length - assignedCount
-  const available = (exclude = []) => eligible.filter((r) => !usedIds().includes(r._id) && !exclude.includes(r._id))
+
+  const available = (exclude = []) =>
+    eligible.filter(
+      (r) =>
+        !usedIds().includes(r._id) &&
+        !exclude.includes(r._id) &&
+        (editMode || !drawnIds.has(String(r._id)))
+    )
 
   const setPair = (i, key) => (e) => {
     const next = [...manualPairs]
@@ -222,7 +255,7 @@ export default function Draws() {
         method: 'POST',
         body: { weight: weight || '', age: age || '', gender: '', bouts: pairs },
       })
-      toast('Draw saved — winners will advance automatically')
+      toast(editMode ? 'Draw updated — winners will advance automatically' : 'Draw created — winners will advance automatically')
       setManualOpen(false)
       await loadDraw(id, weight, age)
     } catch (err) {
@@ -290,27 +323,41 @@ export default function Draws() {
       <Modal
         open={manualOpen}
         onClose={() => setManualOpen(false)}
-        title={`${hasDraw ? 'Update' : 'Create'} Draw${weight ? ` — ${weight}` : ''}${age ? ` · ${age}` : ''}`}
+        title={`${editMode ? 'Update' : 'Create'} Draw${weight ? ` — ${weight}` : ''}${age ? ` · ${age}` : ''}`}
         footer={
           <>
             <Button variant="secondary" onClick={() => setManualOpen(false)}>Cancel</Button>
             <Button onClick={buildManual} disabled={building || assignedCount === 0}>
-              {building ? <Spinner className="h-4 w-4 border-white" /> : hasDraw ? 'Update Draw' : 'Create Draw'}
+              {building ? <Spinner className="h-4 w-4 border-white" /> : editMode ? 'Save Changes' : 'Create Draw'}
             </Button>
           </>
         }
       >
         <div className="space-y-5">
+          {editMode ? (
+            <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-900">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">✓</span>
+              <p>Editing the existing draw — tweak the pairings below and save to rebuild the bracket.</p>
+            </div>
+          ) : drawnIds.size > 0 ? (
+            <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
+              <span className="text-amber-600">!</span>
+              <p>
+                {drawnIds.size} boxer{drawnIds.size === 1 ? '' : 's'} already placed in this bracket are hidden from the lists to avoid duplicates.
+              </p>
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-3 gap-2">
             <Stat label="Eligible" value={eligible.length} />
-            <Stat label="Assigned" value={assignedCount} tone="blue" />
-            <Stat label="Remaining" value={remainingCount} tone={remainingCount > 0 ? 'amber' : 'slate'} />
+            <Stat label="In Draw" value={assignedCount} tone={assignedCount ? 'blue' : 'slate'} />
+            <Stat label="Unassigned" value={remainingCount} tone={remainingCount > 0 ? 'amber' : 'emerald'} />
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2.5">
             <p className="text-sm text-slate-600">
-              {hasDraw
-                ? 'The current bracket is shown below — adjust the pairings and save to rebuild.'
+              {editMode
+                ? 'Load the current pairings and adjust before you save.'
                 : 'Pair boxers into bouts. Empty slots become byes.'}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -369,38 +416,51 @@ export default function Draws() {
           {manualPairs.length === 0 ? (
             <Empty title="No bouts yet" message="Add a bout to start pairing boxers." />
           ) : (
-            <ul className="divide-y divide-slate-200 rounded-xl border border-slate-200">
+            <div className="space-y-3">
               {manualPairs.map((p, i) => (
-                <li key={i} className="grid gap-2 p-3 sm:grid-cols-[1fr_auto_1fr_auto] sm:items-end">
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Boxer A</label>
-                    <select value={p.a} onChange={setPair(i, 'a')} className={selectClass}>
-                      <option value="">— Bye / empty —</option>
-                      {available([p.a]).map((r) => (
-                        <option key={r._id} value={r._id}>{boxerLabel(r)}</option>
-                      ))}
-                    </select>
+                <div key={i} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Bout {i + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => removePair(i)}
+                      className="rounded-md px-2 py-1 text-xs font-medium text-rose-500 hover:bg-rose-50"
+                    >
+                      Remove
+                    </button>
                   </div>
-                  <span className="hidden pb-2 text-center text-sm font-semibold text-slate-400 sm:block">vs</span>
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Boxer B</label>
-                    <select value={p.b} onChange={setPair(i, 'b')} className={selectClass}>
-                      <option value="">— Bye / empty —</option>
-                      {available([p.b]).map((r) => (
-                        <option key={r._id} value={r._id}>{boxerLabel(r)}</option>
-                      ))}
-                    </select>
+                  <div className="flex items-center gap-3">
+                    <div className="min-w-0 flex-1">
+                      <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Boxer A</label>
+                      <select value={p.a} onChange={setPair(i, 'a')} className={selectClass}>
+                        <option value="">— Bye / empty —</option>
+                        {available([p.a]).map((r) => (
+                          <option key={r._id} value={r._id}>
+                            {r.boxerId?.fullName || 'Boxer'} — {r.clubId?.name || 'Guest'}
+                            {r.category?.weight ? ` (${r.category.weight})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <SelectedPlayer r={p.a ? byId.get(p.a) : null} />
+                    </div>
+                    <span className="mt-4 text-sm font-bold text-slate-300">VS</span>
+                    <div className="min-w-0 flex-1">
+                      <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Boxer B</label>
+                      <select value={p.b} onChange={setPair(i, 'b')} className={selectClass}>
+                        <option value="">— Bye / empty —</option>
+                        {available([p.b]).map((r) => (
+                          <option key={r._id} value={r._id}>
+                            {r.boxerId?.fullName || 'Boxer'} — {r.clubId?.name || 'Guest'}
+                            {r.category?.weight ? ` (${r.category.weight})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <SelectedPlayer r={p.b ? byId.get(p.b) : null} />
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => removePair(i)}
-                    className="mb-0.5 justify-self-start rounded-md px-2 py-1 text-sm text-slate-400 hover:bg-slate-100 hover:text-rose-600 sm:justify-self-end"
-                  >
-                    Remove
-                  </button>
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </div>
       </Modal>
