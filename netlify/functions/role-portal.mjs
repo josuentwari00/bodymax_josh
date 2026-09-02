@@ -59,7 +59,6 @@ export default async (event) => {
         eventId: link.eventId,
         status: { $nin: ['registered', 'pending_approval', 'needs_correction', 'not_eligible', 'withdrawn'] },
       })
-        .populate('clubId', 'name')
         .populate('boxerId')
         .sort({ createdAt: 1 })
         .lean()

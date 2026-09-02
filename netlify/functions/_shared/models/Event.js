@@ -47,11 +47,10 @@ const EventSchema = new mongoose.Schema(
   { timestamps: true }
 )
 
-EventSchema.pre('save', function (next) {
+EventSchema.pre('save', async function () {
   if (!this.registrationToken) {
     this.registrationToken = crypto.randomBytes(16).toString('hex')
   }
-  next()
 })
 
 export default mongoose.models.Event || mongoose.model('Event', EventSchema)

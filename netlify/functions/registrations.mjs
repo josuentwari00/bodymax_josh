@@ -21,13 +21,9 @@ export default async (event) => {
     if (method === 'GET') {
       if (id) {
         const reg = await Registration.findById(id)
-          .populate('clubId')
           .populate('boxerId')
           .lean()
         if (!reg) return errorResponse({ message: 'Registration not found', status: 404 })
-        if (user.role === 'club' && String(reg.clubId._id) !== String(user.clubId)) {
-          return errorResponse({ message: 'Forbidden', status: 403 })
-        }
         return success({ registration: reg })
       }
 
@@ -35,18 +31,9 @@ export default async (event) => {
       if (eventId) query.eventId = eventId
       if (status) query.status = status
 
-      if (user.role === 'club') {
-        query.clubId = user.clubId
-      } else if (user.role === 'official' && user.officialRole === 'weighin') {
-        if (eventId) query.eventId = eventId
-      } else if (user.role === 'promoter') {
-        if (clubId) query.clubId = clubId
-      }
-
       const regs = await Registration.find(query)
-        .populate('clubId', 'name contactName contactEmail contactPhone')
         .populate('boxerId')
-        .populate('eventId', 'name paymentAccount promoterContact feeStructure')
+        .populate('eventId', 'name eventDate')
         .sort({ createdAt: -1 })
         .lean()
       return success({ registrations: regs })
