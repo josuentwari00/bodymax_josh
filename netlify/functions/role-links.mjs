@@ -23,7 +23,8 @@ export default async (event) => {
 
     const ev = await Event.findById(eventId)
     if (!ev) return errorResponse({ message: 'Event not found', status: 404 })
-    if (String(ev.createdBy) !== String(user._id)) {
+    // Legacy events may have no owner recorded; any promoter may manage those.
+    if (ev.createdBy && String(ev.createdBy) !== String(user._id)) {
       return errorResponse({ message: 'You do not own this event', status: 403 })
     }
 

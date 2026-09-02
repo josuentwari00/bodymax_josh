@@ -15,7 +15,7 @@ function slugify(str) {
 export default async (event) => {
   event = await normalizeRequest(event)
   try {
-    await requireRole('promoter')(event)
+    const user = await requireRole('promoter')(event)
 
     if (event.httpMethod === 'OPTIONS') {
       return success({})
@@ -35,12 +35,11 @@ export default async (event) => {
     const eventData = {
       ...body,
       slug,
-      createdBy: body.createdBy,
+      createdBy: user._id,
       status: body.status || 'open',
       registrationOpen: body.registrationOpen !== undefined ? body.registrationOpen : true,
       public: body.public !== undefined ? body.public : true,
     }
-    delete eventData.createdBy
 
     const ev = await Event.create(eventData)
     return success({ event: ev }, 201)
