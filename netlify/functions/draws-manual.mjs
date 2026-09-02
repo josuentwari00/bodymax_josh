@@ -4,7 +4,6 @@ import Club from './_shared/models/Club.js'
 import Boxer from './_shared/models/Boxer.js'
 import Registration from './_shared/models/Registration.js'
 import Bout from './_shared/models/Bout.js'
-import { nextPowerOfTwo, buildBracket } from './_shared/bracket.js'
 import { requireRole, success, errorResponse } from './_shared/middleware/auth.js'
 import { normalizeRequest } from './_shared/request.js'
 
@@ -69,15 +68,29 @@ export default async (event) => {
       'category.gender': gender,
     })
 
-    const leafList = []
+    // Create a flat list of bouts for the event (single round, no bracket rounds)
+    const saved = []
+    let boutNumber = 1
     for (const p of bouts) {
-      leafList.push(p.boxerAId || null)
-      leafList.push(p.boxerBId || null)
+      const a = p.boxerAId || null
+      const b = p.boxerBId || null
+      const bout = new Bout({
+        eventId,
+        category,
+        round: 1,
+        roundName: 'Bout',
+        boutNumber: boutNumber++,
+        bracketPosition: saved.length,
+        boxerAId: a,
+        boxerBId: b,
+        status: a && b ? 'scheduled' : 'walkover',
+      })
+      if (!a || !b) {
+        bout.winnerId = a || b || null
+        bout.result = { winnerId: bout.winnerId, method: 'Walkover', recordedAt: new Date() }
+      }
+      saved.push(await bout.save())
     }
-    const size = nextPowerOfTwo(leafList.length)
-    while (leafList.length < size) leafList.push(null)
-
-    await buildBracket({ eventId, category, leafSlots: leafList })
 
     const allBouts = await Bout.find({
       eventId,
@@ -85,7 +98,7 @@ export default async (event) => {
       'category.age': age,
       'category.gender': gender,
     })
-      .sort({ round: 1, bracketPosition: 1 })
+      .sort({ boutNumber: 1 })
       .populate({
         path: 'boxerAId',
         populate: { path: 'boxerId clubId' },
@@ -97,7 +110,7 @@ export default async (event) => {
       .populate('winnerId')
       .lean()
 
-    return success({ message: 'Manual draw created', bouts: allBouts, size })
+    return success({ message: 'Manual draw created', bouts: allBouts, size: saved.length })
   } catch (err) {
     return errorResponse(err)
   }

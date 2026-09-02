@@ -9,42 +9,100 @@ import { Select, Input } from '../../components/Field.jsx'
 import { Modal } from '../../components/Modal.jsx'
 import { cn } from '../../utils/cn.js'
 
-function BracketView({ byRound }) {
-  const rounds = Object.keys(byRound).sort((a, b) => a - b)
-  return (
-    <div className="overflow-x-auto">
-      <div className="flex min-w-max gap-8">
-        {rounds.map((r) => (
-          <div key={r} className="flex flex-col gap-4">
-            <h4 className="text-sm font-semibold text-slate-500">Round {r}</h4>
-            {byRound[r].map((b) => (
-              <div key={b._id} className="w-60 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-                <p className="text-xs font-medium text-slate-400">
-                  {b.roundName} · Bout #{b.boutNumber} ·{' '}
-                  {b.category?.weight || 'All weights'}
-                  {b.category?.age ? ` / ${b.category.age}` : ''}
-                </p>
-                <div className="mt-2 space-y-1 text-sm">
-                  <div className="flex items-center justify-between rounded bg-slate-50 px-2 py-1">
-                    <span className={b.status === 'completed' && b.winnerId && String(b.winnerId) === String(b.boxerAId?._id) ? 'font-bold text-brand-700' : ''}>
-                      {b.status === 'walkover' && !b.boxerAId ? '— Bye —' : b.boxerAId?.boxerId?.fullName || '—'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between rounded bg-slate-50 px-2 py-1">
-                    <span className={b.status === 'completed' && b.winnerId && String(b.winnerId) === String(b.boxerBId?._id) ? 'font-bold text-brand-700' : ''}>
-                      {b.status === 'walkover' && !b.boxerBId ? '— Bye —' : b.boxerBId?.boxerId?.fullName || '—'}
-                    </span>
-                  </div>
-                </div>
-                <p className="mt-2 text-xs text-slate-400">
-                  {b.status === 'completed' ? `Result: ${b.result?.method || 'Decision'}` : b.status}
-                </p>
-              </div>
-            ))}
-          </div>
-        ))}
+function BoutCard({ bout, index }) {
+  const a = bout.boxerAId
+  const b = bout.boxerBId
+  const aName = a?.boxerId?.fullName
+  const bName = b?.boxerId?.fullName
+  const aClub = a?.clubId?.name
+  const bClub = b?.clubId?.name
+  const winnerId = bout.winnerId
+
+  const slot = (reg, name, club) => {
+    const isWinner = winnerId && String(winnerId) === String(reg?._id)
+    return (
+      <div className={cn(
+        'flex flex-1 items-center gap-3 rounded-xl border px-3 py-2',
+        isWinner
+          ? 'border-emerald-200 bg-emerald-50'
+          : bout.status === 'completed'
+            ? 'border-slate-200 bg-slate-50'
+            : 'border-slate-200 bg-white'
+      )}>
+        <span className={cn(
+          'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold',
+          isWinner ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'
+        )}>
+          {name?.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '—'}
+        </span>
+        <span className="min-w-0">
+          <span className={cn('block truncate text-sm font-semibold', isWinner ? 'text-emerald-900' : 'text-slate-900')}>
+            {name || <span className="italic text-slate-400">Bye</span>}
+            {isWinner && <span className="ml-1.5 text-xs font-bold text-emerald-600">WINNER</span>}
+          </span>
+          <span className="block truncate text-xs text-slate-500">{club || 'Guest'}</span>
+        </span>
       </div>
-    </div>
+    )
+  }
+
+  return (
+    <li className="px-5 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-900 font-bold text-white">
+            {index + 1}
+          </span>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Bout #{bout.boutNumber}</p>
+            <p className="text-xs text-slate-500">
+              {bout.category?.weight || 'All weights'}
+              {bout.category?.age ? ` · ${bout.category.age}` : ''}
+              {bout.category?.gender ? ` · ${bout.category.gender}` : ''}
+            </p>
+          </div>
+        </div>
+        <StatusPill status={bout.status} />
+      </div>
+
+      <div className="mt-3 flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+        {slot(a, aName, aClub)}
+        <span className="px-1 text-center text-xs font-bold uppercase tracking-widest text-slate-300">vs</span>
+        {slot(b, bName, bClub)}
+      </div>
+
+      {bout.status === 'completed' && (
+        <p className="mt-2 text-xs text-emerald-700">
+          Result: {bout.result?.method || 'Decision'}{bout.result?.round ? ` · ${bout.result.round}` : ''}
+        </p>
+      )}
+    </li>
+  )
+}
+
+function StatusPill({ status }) {
+  const map = {
+    scheduled: 'bg-blue-100 text-blue-800',
+    ready: 'bg-blue-100 text-blue-800',
+    in_progress: 'bg-amber-100 text-amber-800',
+    walkover: 'bg-amber-100 text-amber-800',
+    completed: 'bg-emerald-100 text-emerald-800',
+    postponed: 'bg-slate-100 text-slate-600',
+    cancelled: 'bg-slate-100 text-slate-600',
+  }
+  const label = {
+    scheduled: 'Scheduled',
+    ready: 'Ready',
+    in_progress: 'In Progress',
+    walkover: 'Walkover',
+    completed: 'Completed',
+    postponed: 'Postponed',
+    cancelled: 'Cancelled',
+  }
+  return (
+    <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium', map[status] || 'bg-slate-100 text-slate-700')}>
+      {label[status] || status.replace('_', ' ')}
+    </span>
   )
 }
 
@@ -93,7 +151,6 @@ export default function Draws() {
   const [registrations, setRegistrations] = useState(null)
   const [weight, setWeight] = useState('')
   const [age, setAge] = useState('')
-  const [byRound, setByRound] = useState(null)
   const [bouts, setBouts] = useState(null)
 
   const [manualOpen, setManualOpen] = useState(false)
@@ -113,10 +170,8 @@ export default function Draws() {
   const loadDraw = async (evtId, w, a) => {
     try {
       const d = await api(`/draws/get?eventId=${evtId}&weight=${encodeURIComponent(w || '')}&age=${encodeURIComponent(a || '')}`)
-      setByRound(d.byRound || {})
       setBouts(d.bouts || [])
     } catch {
-      setByRound(null)
       setBouts(null)
     }
   }
@@ -148,25 +203,25 @@ export default function Draws() {
   const showAgeFilter = ageCats.length > 0
   const byId = new Map(eligible.map((r) => [r._id, r]))
 
-  // Boxers already placed in this category's existing draw (round 1 assignments)
+  const hasDraw = (bouts?.length || 0) > 0
+
+  // Boxers already placed in this category's draw are hidden to avoid duplicates
   const drawnIds = new Set(
     (bouts || [])
-      .filter((b) => b.round === 1)
       .flatMap((b) => [b.boxerAId?._id, b.boxerBId?._id])
       .filter(Boolean)
       .map(String)
   )
 
   const openManual = () => {
-    const hasExisting = !!hasDraw
-    const r1 = hasExisting
+    const r1 = hasDraw
       ? (bouts || [])
-          .filter((b) => b.round === 1)
-          .sort((a, b) => a.bracketPosition - b.bracketPosition)
+          .slice()
+          .sort((a, b) => a.boutNumber - b.boutNumber)
           .map((b) => ({ a: b.boxerAId?._id || '', b: b.boxerBId?._id || '' }))
       : []
     setManualPairs(r1.length ? r1 : [{ a: '', b: '' }])
-    setEditMode(hasExisting)
+    setEditMode(hasDraw)
     setAddForm({ fullName: '', gender: '', weight: weight || '', age: age || '' })
     setAddBoxerOpen(false)
     setManualOpen(true)
@@ -255,7 +310,7 @@ export default function Draws() {
         method: 'POST',
         body: { weight: weight || '', age: age || '', gender: '', bouts: pairs },
       })
-      toast(editMode ? 'Draw updated — winners will advance automatically' : 'Draw created — winners will advance automatically')
+      toast(editMode ? 'Draw updated — the bout list has been rebuilt' : 'Draw created — bouts are now live')
       setManualOpen(false)
       await loadDraw(id, weight, age)
     } catch (err) {
@@ -265,14 +320,14 @@ export default function Draws() {
     }
   }
 
-  const hasDraw = byRound && Object.keys(byRound).length > 0
+  const ordered = (bouts || []).slice().sort((a, b) => a.boutNumber - b.boutNumber)
 
   return (
     <div>
       <div className="mb-6">
         <button onClick={() => navigate(`/app/events/${id}`)} className="mb-1 text-sm text-brand-600 hover:underline">← Back to Event</button>
-        <h1 className="text-2xl font-bold text-slate-900">Draws & Bracket</h1>
-        <p className="text-sm text-slate-500">{event.name} · build and update brackets manually</p>
+        <h1 className="text-2xl font-bold text-slate-900">Draw & Bouts</h1>
+        <p className="text-sm text-slate-500">{event.name} · pair boxers into bouts for this event</p>
       </div>
 
       <div className="mb-6 flex flex-wrap items-end gap-4">
@@ -307,15 +362,19 @@ export default function Draws() {
       {!hasDraw ? (
         <Card>
           <Empty
-            title="No draw yet"
-            message="Create a manual draw for this category — pair boxers yourself, add guest boxers if needed, and build the bracket."
+            title="No bouts yet"
+            message="Create a draw for this category — pair boxers yourself, add guest boxers if needed, and publish the bout list."
           />
         </Card>
       ) : (
         <Card>
-          <CardHeader title="Bracket" subtitle="Record results on the Bouts page to advance winners automatically" />
+          <CardHeader title="Bout List" subtitle={`${ordered.length} bout${ordered.length === 1 ? '' : 's'} scheduled — record results on the Bouts page`} />
           <CardBody>
-            <BracketView byRound={byRound} />
+            <ul className="divide-y divide-slate-200">
+              {ordered.map((b, i) => (
+                <BoutCard key={b._id} bout={b} index={i} />
+              ))}
+            </ul>
           </CardBody>
         </Card>
       )}
@@ -337,13 +396,13 @@ export default function Draws() {
           {editMode ? (
             <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-900">
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">✓</span>
-              <p>Editing the existing draw — tweak the pairings below and save to rebuild the bracket.</p>
+              <p>Editing the current drawing — tweak the pairings below and save to rebuild the bout list.</p>
             </div>
           ) : drawnIds.size > 0 ? (
             <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
               <span className="text-amber-600">!</span>
               <p>
-                {drawnIds.size} boxer{drawnIds.size === 1 ? '' : 's'} already placed in this bracket are hidden from the lists to avoid duplicates.
+                {drawnIds.size} boxer{drawnIds.size === 1 ? '' : 's'} already placed in this drawing are hidden from the lists to avoid duplicates.
               </p>
             </div>
           ) : null}
@@ -357,8 +416,8 @@ export default function Draws() {
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2.5">
             <p className="text-sm text-slate-600">
               {editMode
-                ? 'Load the current pairings and adjust before you save.'
-                : 'Pair boxers into bouts. Empty slots become byes.'}
+                ? 'Each pairing saves as one scheduled bout. Empty slots become walkover byes.'
+                : 'Pair boxers into bouts. Empty slots become walkover byes.'}
             </p>
             <div className="flex flex-wrap gap-2">
               <Button size="sm" variant="secondary" onClick={addPair}>+ Bout</Button>
