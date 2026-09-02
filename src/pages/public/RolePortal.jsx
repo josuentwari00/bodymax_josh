@@ -25,7 +25,7 @@ function StatusPill({ status }) {
     cancelled: 'Cancelled',
   }
   return (
-    <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium', STATUS_STYLES[status] || 'bg-slate-100 text-slate-700')}>
+    <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold', STATUS_STYLES[status] || 'bg-slate-100 text-slate-700')}>
       {label[status] || status.replace('_', ' ')}
     </span>
   )
@@ -50,75 +50,86 @@ function initials(name) {
   return (name || '?').split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()
 }
 
+function FightCell({ reg, isWinner, accentSoft }) {
+  return (
+    <div
+      className={cn(
+        'flex min-w-0 flex-1 items-center gap-3 rounded-xl border px-3 py-2.5',
+        isWinner ? cn('border-transparent', accentSoft) : 'border-slate-100 bg-white'
+      )}
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-bold text-slate-600">
+        {initials(reg?.boxerId?.fullName)}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[15px] font-semibold text-slate-900">
+          {reg?.boxerId?.fullName || <span className="italic text-slate-400">Bye</span>}
+        </span>
+        <span className="block truncate text-xs text-slate-500">{reg?.clubId?.name || 'Guest'}</span>
+      </span>
+      {isWinner && <span className="shrink-0 text-[10px] font-extrabold uppercase tracking-wider text-emerald-600">Winner</span>}
+    </div>
+  )
+}
+
 function ScheduleList({ schedule, accentSolid, accentSoft, showResult }) {
   if (!schedule?.length) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
+      <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center text-sm text-slate-500">
         No bouts scheduled yet.
       </div>
     )
   }
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {schedule.map((b, i) => {
         const a = b.boxerAId
         const bb = b.boxerBId
         const winnerId = b.winnerId ? String(b.winnerId._id || b.winnerId) : null
         const aWin = winnerId && a && String(a._id) === winnerId
         const bWin = winnerId && bb && String(bb._id) === winnerId
+        const meta = []
+        if (b.ring) meta.push(b.ring)
+        if (b.scheduledDate) meta.push(fmtDate(b.scheduledDate))
+        if (b.scheduledTime) meta.push(fmtTime(b.scheduledTime))
+        const cat = [b.category?.weight || 'All weights', b.category?.age, b.category?.gender].filter(Boolean).join(' · ')
+
         return (
           <div key={b._id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3">
-              <div className="flex items-center gap-3">
-                <span className={cn('flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold text-white', accentSolid)}>
+            <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white', accentSolid)}>
                   {i + 1}
                 </span>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Bout #{b.boutNumber}</p>
-                  <p className="text-xs text-slate-500">
-                    {b.category?.weight || 'All weights'}
-                    {b.category?.age ? ` · ${b.category.age}` : ''}
-                    {b.category?.gender ? ` · ${b.category.gender}` : ''}
-                  </p>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-slate-900">Bout #{b.boutNumber}</p>
+                  <p className="truncate text-xs text-slate-500">{cat}</p>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                {b.ring && <span className="rounded-md bg-slate-100 px-2 py-1 font-medium">{b.ring}</span>}
-                {b.scheduledDate && <span>{fmtDate(b.scheduledDate)}</span>}
-                {b.scheduledTime && <span>{fmtTime(b.scheduledTime)}</span>}
+              <div className="shrink-0">
                 <StatusPill status={b.status} />
               </div>
             </div>
-            <div className="flex flex-col items-stretch gap-3 px-5 py-4 sm:flex-row sm:items-center">
-              <span className={cn('flex min-w-0 flex-1 items-center gap-3 rounded-xl border px-3 py-2', aWin ? cn(accentSoft, 'border-transparent') : 'border-slate-100')}>
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
-                  {initials(a?.boxerId?.fullName)}
-                </span>
-                <span className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-1">
-                  <span className={cn('truncate text-base font-semibold', aWin ? 'text-slate-900' : 'text-slate-900')}>
-                    {a?.boxerId?.fullName || <span className="italic text-slate-400">Bye</span>}
-                  </span>
-                  <span className="text-sm text-slate-500">{a?.clubId?.name || 'Guest'}</span>
-                </span>
-                {aWin && <span className="text-xs font-bold uppercase tracking-wide text-emerald-600">Winner</span>}
+
+            {meta.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 px-4 pb-2 sm:px-5">
+                {meta.map((m, mi) => (
+                  <span key={mi} className="rounded-md bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-500">{m}</span>
+                ))}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2 px-4 py-3.5 sm:flex-row sm:items-center sm:px-5">
+              <FightCell reg={a} isWinner={aWin} accentSoft={accentSoft} />
+              <span className="self-center shrink-0 px-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300 sm:px-1">
+                vs
               </span>
-              <span className="self-center text-xs font-bold uppercase tracking-widest text-slate-300">vs</span>
-              <span className={cn('flex min-w-0 flex-1 items-center gap-3 rounded-xl border px-3 py-2', bWin ? cn(accentSoft, 'border-transparent') : 'border-slate-100')}>
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
-                  {initials(b?.boxerId?.fullName)}
-                </span>
-                <span className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-1">
-                  <span className="truncate text-base font-semibold text-slate-900">
-                    {b?.boxerId?.fullName || <span className="italic text-slate-400">Bye</span>}
-                  </span>
-                  <span className="text-sm text-slate-500">{b?.clubId?.name || 'Guest'}</span>
-                </span>
-                {bWin && <span className="text-xs font-bold uppercase tracking-wide text-emerald-600">Winner</span>}
-              </span>
+              <FightCell reg={bb} isWinner={bWin} accentSoft={accentSoft} />
             </div>
+
             {showResult && b.status === 'completed' && b.winnerId && (
-              <div className={cn('mx-5 mb-4 rounded-xl px-4 py-2.5 text-sm font-medium', accentSoft)}>
-                Result: <span className="font-bold">{b.winnerId?.boxerId?.fullName}</span> wins by{' '}
+              <div className={cn('mx-4 mb-4 rounded-xl px-3.5 py-2.5 text-sm font-medium sm:mx-5', accentSoft)}>
+                <span className="font-bold">{b.winnerId?.boxerId?.fullName}</span> wins by{' '}
                 <span className="font-semibold">{b.result?.method || 'Decision'}</span>
                 {b.result?.round ? ` in round ${b.result.round}` : ''}
               </div>
@@ -135,44 +146,44 @@ function BoxerCard({ boxer, accentSolid }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className={cn('h-1.5', accentSolid)} />
-      <div className="flex items-center gap-3 px-5 pt-4">
+      <div className="flex items-center gap-3 px-4 pt-4 sm:px-5">
         {boxer.photoUrl ? (
-          <img src={boxer.photoUrl} alt={boxer.fullName} className="h-14 w-14 rounded-full object-cover" />
+          <img src={boxer.photoUrl} alt={boxer.fullName} className="h-14 w-14 shrink-0 rounded-full object-cover" />
         ) : (
           <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-slate-900 text-lg font-bold text-white">
             {initials(boxer.fullName)}
           </span>
         )}
         <div className="min-w-0">
-          <p className="truncate text-base font-bold text-slate-900">{boxer.fullName}</p>
-          <p className="truncate text-sm text-slate-500">{boxer.clubName || 'Guest boxer'}</p>
+          <p className="truncate text-[15px] font-bold text-slate-900">{boxer.fullName}</p>
+          <p className="truncate text-xs text-slate-500">{boxer.clubName || 'Guest boxer'}</p>
         </div>
       </div>
-      <div className="px-5 py-4">
+      <div className="px-4 py-4 sm:px-5">
         <div className="flex flex-wrap gap-1.5">
           {(boxer.weightCategory || boxer.registeredWeightKg) && (
-            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700">
               {boxer.weightCategory || `${boxer.registeredWeightKg}kg`}
             </span>
           )}
-          {boxer.ageCategory && <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">{boxer.ageCategory}</span>}
-          {boxer.gender && <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">{boxer.gender === 'M' ? 'Male' : 'Female'}</span>}
-          {boxer.nationality && <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">{boxer.nationality}</span>}
+          {boxer.ageCategory && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700">{boxer.ageCategory}</span>}
+          {boxer.gender && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700">{boxer.gender === 'M' ? 'Male' : 'Female'}</span>}
+          {boxer.nationality && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700">{boxer.nationality}</span>}
         </div>
         <div className="mt-4 flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
           <div className="text-center">
             <p className="text-xl font-bold text-emerald-600">{rec.wins ?? 0}</p>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Wins</p>
+            <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Wins</p>
           </div>
           <div className="h-8 w-px bg-slate-200" />
           <div className="text-center">
             <p className="text-xl font-bold text-rose-600">{rec.losses ?? 0}</p>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Losses</p>
+            <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Losses</p>
           </div>
           <div className="h-8 w-px bg-slate-200" />
           <div className="text-center">
             <p className="text-xl font-bold text-slate-700">{rec.draws ?? 0}</p>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Draws</p>
+            <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Draws</p>
           </div>
         </div>
         {boxer.experience && <p className="mt-3 truncate text-xs text-slate-500">{boxer.experience}</p>}
@@ -184,10 +195,10 @@ function BoxerCard({ boxer, accentSolid }) {
 function SectionTitle({ children, sub, accentSolid }) {
   return (
     <div className="mb-4 flex items-center gap-3">
-      <span className={cn('h-8 w-1.5 rounded-full', accentSolid)} />
-      <div>
+      <span className={cn('h-7 w-1.5 shrink-0 rounded-full', accentSolid)} />
+      <div className="min-w-0">
         <h2 className="text-lg font-bold text-slate-900">{children}</h2>
-        {sub && <p className="text-sm text-slate-500">{sub}</p>}
+        {sub && <p className="text-[13px] text-slate-500">{sub}</p>}
       </div>
     </div>
   )
@@ -209,7 +220,7 @@ const ROLES = {
     accentSoft: 'bg-violet-50',
   },
   official: {
-    name: 'Official Officials Portal',
+    name: 'Officials Portal',
     tagline: 'Fight schedule and recorded results for officials.',
     gradient: 'from-slate-700 via-slate-800 to-slate-900',
     accentSolid: 'bg-amber-500',
@@ -224,35 +235,55 @@ const ROLES = {
   },
 }
 
+const EVENT_STATUS = {
+  draft: { label: 'Draft', cls: 'bg-slate-200 text-slate-700' },
+  open: { label: 'Open', cls: 'bg-emerald-500/25 text-emerald-100' },
+  closed: { label: 'Closed', cls: 'bg-white/15 text-white/80' },
+  in_progress: { label: 'In Progress', cls: 'bg-brand-500/30 text-white' },
+  completed: { label: 'Completed', cls: 'bg-white/15 text-white/80' },
+  archived: { label: 'Archived', cls: 'bg-white/15 text-white/80' },
+}
+
 function PortalShell({ data }) {
   const cfg = ROLES[data.role] || ROLES.official
+  const status = EVENT_STATUS[data.event.status] || null
+
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
-          <Link to="/" className="text-sm font-bold tracking-tight text-slate-900">
-            bodymax<span className="text-brand-600">events</span>
+      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-2 px-4 py-3 sm:px-6">
+          <Link to="/" className="flex items-center gap-1.5 text-sm font-extrabold tracking-tight text-slate-900">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-900 text-[10px] font-black text-white">b</span>
+            <span className="truncate">
+              bodymax<span className="text-brand-600">events</span>
+            </span>
           </Link>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            Read-only access
-          </span>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="hidden rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 sm:inline-flex">{cfg.name}</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Read-only
+            </span>
+          </div>
         </div>
       </header>
 
       <div className={cn('bg-gradient-to-br text-white', cfg.gradient)}>
-        <div className="mx-auto max-w-4xl px-4 py-8">
-          <p className="text-xs font-semibold uppercase tracking-widest text-white/60">{cfg.name}</p>
-          <h1 className="mt-1 text-2xl font-extrabold sm:text-3xl">{data.event.name}</h1>
-          <p className="mt-1 text-sm text-white/80">{cfg.tagline}</p>
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/70">
+        <div className="mx-auto w-full max-w-4xl px-4 py-7 sm:px-6 sm:py-9">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">{cfg.name}</p>
+            {status && <span className={cn('rounded-full px-2.5 py-1 text-[11px] font-semibold', status.cls)}>{status.label}</span>}
+          </div>
+          <h1 className="mt-2 text-2xl font-extrabold leading-tight sm:text-3xl">{data.event.name}</h1>
+          <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-white/80">{cfg.tagline}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[13px] text-white/70">
             {data.event.venue && <span>Venue: {data.event.venue}{data.event.location ? `, ${data.event.location}` : ''}</span>}
             {data.event.eventDate && <span>Date: {fmtDate(data.event.eventDate)}</span>}
           </div>
         </div>
       </div>
 
-      <main className="mx-auto max-w-4xl px-4 py-8">
+      <main className="mx-auto w-full max-w-4xl px-4 py-7 sm:px-6 sm:py-9">
         {data.role === 'mc' && (
           <section>
             <SectionTitle accentSolid={cfg.accentSolid}>Fight Card</SectionTitle>
@@ -261,7 +292,7 @@ function PortalShell({ data }) {
         )}
 
         {data.role === 'commentator' && (
-          <div className="space-y-12">
+          <div className="space-y-10">
             <section>
               <SectionTitle accentSolid={cfg.accentSolid}>Fight Card</SectionTitle>
               <ScheduleList schedule={data.schedule} accentSolid={cfg.accentSolid} accentSoft={cfg.accentSoft} showResult />
@@ -270,7 +301,7 @@ function PortalShell({ data }) {
               <SectionTitle accentSolid={cfg.accentSolid} sub={`${data.boxers?.length || 0} boxers competing tonight`}>
                 Boxer Profiles
               </SectionTitle>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 sm:gap-4">
                 {(data.boxers || []).map((boxer) => (
                   <BoxerCard key={boxer._id} boxer={boxer} accentSolid={cfg.accentSolid} />
                 ))}
@@ -280,7 +311,7 @@ function PortalShell({ data }) {
         )}
 
         {(data.role === 'official' || data.role === 'judge') && (
-          <div className="space-y-12">
+          <div className="space-y-10">
             <section>
               <SectionTitle accentSolid={cfg.accentSolid}>Fight Schedule</SectionTitle>
               <ScheduleList schedule={data.schedule} accentSolid={cfg.accentSolid} accentSoft={cfg.accentSoft} showResult />
@@ -290,29 +321,32 @@ function PortalShell({ data }) {
                 Results
               </SectionTitle>
               {!data.results?.length ? (
-                <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center text-sm text-slate-500">
                   No results recorded yet.
                 </div>
               ) : (
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                   <ul className="divide-y divide-slate-100">
                     {data.results.map((b, i) => (
-                      <li key={b._id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <span className={cn('flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold text-white', cfg.accentSolid)}>{i + 1}</span>
-                          <div>
-                            <p className="font-semibold text-slate-900">
+                      <li key={b._id} className="flex flex-col gap-2 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white', cfg.accentSolid)}>{i + 1}</span>
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-slate-900">
                               {b.winnerId?.boxerId?.fullName}{' '}
-                              <span className="font-normal text-slate-400">beat</span> {b.boxerAId?.boxerId?.fullName === b.winnerId?.boxerId?.fullName ? b.boxerBId?.boxerId?.fullName : b.boxerAId?.boxerId?.fullName}
+                              <span className="font-normal text-slate-400">beat</span>{' '}
+                              {b.boxerAId?.boxerId?.fullName === b.winnerId?.boxerId?.fullName ? b.boxerBId?.boxerId?.fullName : b.boxerAId?.boxerId?.fullName}
                             </p>
-                            <p className="text-sm text-slate-500">
+                            <p className="mt-0.5 truncate text-xs text-slate-500">
                               Bout #{b.boutNumber}
                               {b.result?.method ? ` · ${b.result.method}` : ''}
                               {b.result?.round ? ` · Round ${b.result.round}` : ''}
                             </p>
                           </div>
                         </div>
-                        <StatusPill status={b.status} />
+                        <div className="shrink-0 self-start sm:self-auto">
+                          <StatusPill status={b.status} />
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -324,7 +358,7 @@ function PortalShell({ data }) {
       </main>
 
       <footer className="border-t border-slate-200 bg-white py-6">
-        <div className="mx-auto max-w-4xl px-4 text-center text-sm text-slate-400">
+        <div className="mx-auto w-full max-w-4xl px-4 text-center text-xs text-slate-400 sm:text-sm sm:px-6">
           Powered by <span className="font-semibold text-slate-600">bodymax events</span> · This portal is read-only and shared by the promoter.
         </div>
       </footer>
@@ -356,7 +390,7 @@ export default function RolePortal() {
   if (error) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-100 text-3xl font-bold text-rose-600">!</div>
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-100 text-2xl font-bold text-rose-600">!</div>
         <h1 className="mt-4 text-xl font-bold text-slate-900">Portal unavailable</h1>
         <p className="mt-1 max-w-sm text-sm text-slate-600">{error}</p>
         <p className="mt-2 text-sm text-slate-500">Ask the promoter for a fresh link.</p>
