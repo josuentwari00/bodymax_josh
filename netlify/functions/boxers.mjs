@@ -72,15 +72,13 @@ export default async (event) => {
     // Create boxer
     if (method === 'POST') {
       const roleUser = await requireRole('club', 'promoter')(event)
-      // club can only create for itself
+      // club can only create for itself; promoter can leave a boxer unaffiliated
       let body = JSON.parse(event.body || '{}')
-      let effectiveClubId = body.clubId
+      let effectiveClubId = body.clubId || null
       if (user.role === 'club') {
         effectiveClubId = user.clubId
         const club = await Club.findById(user.clubId)
         if (!club) return errorResponse({ message: 'Club not found', status: 404 })
-      } else {
-        if (!effectiveClubId) return errorResponse({ message: 'clubId required', status: 400 })
       }
 
       if (!body.fullName) return errorResponse({ message: 'Boxer full name required', status: 400 })

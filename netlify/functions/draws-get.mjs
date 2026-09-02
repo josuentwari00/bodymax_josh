@@ -1,5 +1,7 @@
 ﻿import { connectDB } from './_shared/db.js'
 import Event from './_shared/models/Event.js'
+import Club from './_shared/models/Club.js'
+import Boxer from './_shared/models/Boxer.js'
 import Registration from './_shared/models/Registration.js'
 import Bout from './_shared/models/Bout.js'
 import { requireAuth, success, errorResponse } from './_shared/middleware/auth.js'

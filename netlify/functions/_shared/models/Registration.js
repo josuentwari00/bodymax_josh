@@ -11,7 +11,7 @@ const RegistrationSchema = new mongoose.Schema(
     clubId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Club',
-      required: true,
+      default: null,
       index: true,
     },
     boxerId: {

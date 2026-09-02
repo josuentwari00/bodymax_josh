@@ -5,7 +5,7 @@ const BoxerSchema = new mongoose.Schema(
     clubId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Club',
-      required: true,
+      default: null,
       index: true,
     },
     fullName: { type: String, required: true, trim: true },

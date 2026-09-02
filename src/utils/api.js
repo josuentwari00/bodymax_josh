@@ -15,6 +15,7 @@ const PATH_MAP = {
   '/weighins/record': '/weighins-record',
   '/draws/manual': '/draws-manual',
   '/draws/get': '/draws-get',
+  '/draws/boxer': '/draws-boxer',
   '/results/record': '/results-record',
 }
 
