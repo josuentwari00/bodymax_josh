@@ -44,9 +44,9 @@ export default async (event) => {
       }
 
       const regs = await Registration.find(query)
-        .populate('clubId', 'name')
+        .populate('clubId', 'name contactName contactEmail contactPhone')
         .populate('boxerId')
-        .populate('eventId', 'name')
+        .populate('eventId', 'name paymentAccount promoterContact feeStructure')
         .sort({ createdAt: -1 })
         .lean()
       return success({ registrations: regs })

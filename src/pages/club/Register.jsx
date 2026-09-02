@@ -6,7 +6,6 @@ import { Card } from '../../components/Card.jsx'
 import { Loading, Empty, Spinner } from '../../components/Loading.jsx'
 import { StatusBadge, Badge } from '../../components/Badge.jsx'
 import { Modal } from '../../components/Modal.jsx'
-import { Input } from '../../components/Field.jsx'
 import { cn } from '../../utils/cn.js'
 
 function PayInfo({ event }) {
@@ -129,7 +128,6 @@ export default function ClubRegister() {
   const [selectedBoxers, setSelectedBoxers] = useState([])
   const [boxerCats, setBoxerCats] = useState({})
   const [payModal, setPayModal] = useState(null)
-  const [payForm, setPayForm] = useState({ amount: '', method: '', reference: '', paidAt: '' })
   const [busy, setBusy] = useState(false)
   const [lastSummary, setLastSummary] = useState(null)
 
@@ -207,38 +205,14 @@ export default function ClubRegister() {
       }
       toast(`${selectedBoxers.length} boxer(s) registered`)
       setLastSummary({
-        name: activeEvent.name,
+        event: activeEvent,
         fee: totalFee,
-        currency: activeEvent.feeStructure?.currency,
         perBoxer: feePerBoxer,
         requiresPayment,
       })
       setSelectedBoxers([])
       setBoxerCats({})
       setStep(3)
-      load()
-    } catch (err) {
-      toast(err.message, 'error')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const submitPayment = async () => {
-    setBusy(true)
-    try {
-      await api(`/registrations/payment?id=${payModal._id}`, {
-        method: 'PUT',
-        body: {
-          amount: Number(payForm.amount),
-          method: payForm.method,
-          reference: payForm.reference,
-          paidAt: payForm.paidAt || undefined,
-        },
-      })
-      toast('Payment submitted for review')
-      setPayModal(null)
-      setPayForm({ amount: '', method: '', reference: '', paidAt: '' })
       load()
     } catch (err) {
       toast(err.message, 'error')
@@ -258,6 +232,12 @@ export default function ClubRegister() {
       ? `${activeEvent.feeStructure.amount} ${activeEvent.feeStructure.currency}${feeType === 'per_boxer' ? ' / boxer' : ' per club'}`
       : 'Free'
     : ''
+
+  const hasPayInfo = (ev) => {
+    const acc = ev?.paymentAccount || {}
+    const c = ev?.promoterContact || {}
+    return !!(acc.accountNumber || acc.accountName || acc.bankName || c.phone || c.email || c.name)
+  }
 
   const ActionBar = ({ onBack, children }) => (
     <div className="sticky bottom-20 z-20 mt-6 md:static">
@@ -528,12 +508,25 @@ export default function ClubRegister() {
           </div>
           <h2 className="mt-4 text-xl font-bold text-slate-900">Registration Submitted!</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Your boxers have been entered for {lastSummary?.name}. A promoter will review them — check the list below for their status.
+            Your boxers have been entered for {lastSummary?.event?.name}. A promoter will confirm them shortly — check the list below for their status.
           </p>
-          {lastSummary?.requiresPayment && (
-            <p className="mt-3 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-900">
-              Don't forget to pay the {lastSummary.fee} {lastSummary.currency} entry fee to the account shown for this event.
-            </p>
+          {lastSummary?.requiresPayment && lastSummary?.event && (
+            <>
+              <div className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-left">
+                <p className="text-sm font-semibold text-slate-900">
+                  Pay {lastSummary.fee} {lastSummary.event.feeStructure?.currency} to complete your entry
+                </p>
+                <p className="mt-0.5 text-sm text-slate-600">
+                  Send the fee to the promoter account below. Once the promoter confirms the payment, all your boxers are marked as paid automatically.
+                </p>
+              </div>
+              {hasPayInfo(lastSummary.event) && (
+                <>
+                  <div className="mt-3 text-left"><PayInfo event={lastSummary.event} /></div>
+                  <div className="mt-3 text-left"><ContactCard contact={lastSummary.event.promoterContact} /></div>
+                </>
+              )}
+            </>
           )}
           <Button size="lg" className="mt-6 w-full sm:w-auto" onClick={() => { setStep(0); setSelEvent(''); setLastSummary(null) }}>
             Done — register more boxers
@@ -545,7 +538,7 @@ export default function ClubRegister() {
       <Card className="mt-6 p-0">
         <div className="border-b border-slate-200 bg-slate-50/60 px-5 py-3">
           <h3 className="font-semibold text-slate-900">My Registrations</h3>
-          <p className="text-xs text-slate-500">Track approval status and submit payment details</p>
+          <p className="text-xs text-slate-500">Track approval status and how to pay your entry fee</p>
         </div>
         {registrations.length === 0 ? (
           <div className="p-6">
@@ -559,22 +552,21 @@ export default function ClubRegister() {
                   <p className="font-medium text-slate-900">{r.boxerId?.fullName} — {r.eventId?.name}</p>
                   <p className="text-sm text-slate-500">
                     Category: {r.category?.weight || '—'}
-                    {r.payment?.status !== 'not_required' && ` · Payment: ${r.payment?.status}`}
                   </p>
+                  {r.payment?.status === 'pending' && (
+                    <p className="mt-1 text-xs text-blue-700">Awaiting payment — pay the fee so the promoter can confirm your entry.</p>
+                  )}
+                  {r.payment?.status === 'confirmed' && (
+                    <p className="mt-1 text-xs text-emerald-700">Payment confirmed — entry complete.</p>
+                  )}
                   {r.promoterFeedback && <p className="mt-1 text-xs text-slate-800">Feedback: {r.promoterFeedback}</p>}
                 </div>
                 <div className="flex items-center gap-2">
                   <StatusBadge status={r.status} />
-                  {['approved', 'payment_pending', 'payment_confirmed'].includes(r.status) &&
-                    r.payment?.status !== 'confirmed' &&
-                    r.payment?.status !== 'not_required' &&
-                    r.payment?.status !== 'submitted' && (
-                      <Button size="sm" onClick={() => {
-                        setPayModal(r)
-                        setPayForm({ amount: r.payment?.amount || '', method: '', reference: '', paidAt: '' })
-                      }}>Submit Payment</Button>
-                    )}
-                  {r.payment?.status === 'submitted' && <StatusBadge status="submitted" />}
+                  {r.payment?.status === 'confirmed' && <StatusBadge status="confirmed" />}
+                  {!['not_required', 'confirmed'].includes(r.payment?.status) && hasPayInfo(r.eventId) && (
+                    <Button size="sm" variant="secondary" onClick={() => setPayModal(r)}>How to Pay</Button>
+                  )}
                 </div>
               </li>
             ))}
@@ -585,20 +577,19 @@ export default function ClubRegister() {
       <Modal
         open={!!payModal}
         onClose={() => setPayModal(null)}
-        title={`Submit Payment — ${payModal?.boxerId?.fullName || ''}`}
+        title={`How to Pay — ${payModal?.eventId?.name || 'Event'}`}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setPayModal(null)}>Cancel</Button>
-            <Button onClick={submitPayment} disabled={busy}>{busy ? <Spinner className="h-4 w-4 border-white" /> : 'Submit Payment'}</Button>
+            <Button variant="secondary" onClick={() => setPayModal(null)}>Close</Button>
           </>
         }
       >
-        <div className="space-y-4">
-          <Input label="Amount" type="number" value={payForm.amount} onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })} required />
-          <Input label="Payment Method" value={payForm.method} onChange={(e) => setPayForm({ ...payForm, method: e.target.value })} placeholder="e.g. Mobile Money, Bank Transfer" required />
-          <Input label="Transaction / Reference No." value={payForm.reference} onChange={(e) => setPayForm({ ...payForm, reference: e.target.value })} required />
-          <Input label="Payment Date" type="date" value={payForm.paidAt} onChange={(e) => setPayForm({ ...payForm, paidAt: e.target.value })} />
-        </div>
+        <p className="text-sm text-slate-600">
+          Pay the entry fee to the promoter account below. Once received, the promoter confirms it and all your registered boxers for{' '}
+          <span className="font-medium text-slate-900">{payModal?.eventId?.name || 'this event'}</span> are marked as paid at once.
+        </p>
+        <div className="mt-4"><PayInfo event={payModal?.eventId} /></div>
+        <div className="mt-3"><ContactCard contact={payModal?.eventId?.promoterContact} /></div>
       </Modal>
     </div>
   )

@@ -11,6 +11,7 @@ const PATH_MAP = {
   '/events/update': '/events-update',
   '/registrations/manage': '/registrations-manage',
   '/registrations/payment': '/registrations-payment',
+  '/registrations/bulk': '/registrations-bulk',
   '/weighins/record': '/weighins-record',
   '/draws/generate': '/draws-generate',
   '/draws/manual': '/draws-manual',
