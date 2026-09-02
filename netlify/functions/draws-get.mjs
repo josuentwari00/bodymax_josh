@@ -16,12 +16,12 @@ export default async (event) => {
 
     await connectDB()
 
-    const bouts = await Bout.find({
-      eventId,
-      'category.weight': weight,
-      'category.age': age,
-      'category.gender': gender,
-    })
+    const query = { eventId }
+    if (weight) query['category.weight'] = weight
+    if (age) query['category.age'] = age
+    if (gender) query['category.gender'] = gender
+
+    const bouts = await Bout.find(query)
       .sort({ round: 1, bracketPosition: 1 })
       .populate({
         path: 'boxerAId',

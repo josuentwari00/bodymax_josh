@@ -58,7 +58,6 @@ export default function Draws() {
   const [age, setAge] = useState('')
   const [byRound, setByRound] = useState(null)
   const [bouts, setBouts] = useState(null)
-  const [generating, setGenerating] = useState(false)
 
   const [manualOpen, setManualOpen] = useState(false)
   const [manualPairs, setManualPairs] = useState([])
@@ -94,22 +93,6 @@ export default function Draws() {
   const selectAge = async (a) => {
     setAge(a)
     await loadDraw(id, weight, a)
-  }
-
-  const generate = async () => {
-    setGenerating(true)
-    try {
-      await api(`/draws/generate?eventId=${id}`, {
-        method: 'POST',
-        body: { weight: weight || '', age: age || '', gender: '' },
-      })
-      toast('Automatic draw generated')
-      await loadDraw(id, weight, age)
-    } catch (err) {
-      toast(err.message, 'error')
-    } finally {
-      setGenerating(false)
-    }
   }
 
   if (!event || !registrations) return <Loading />
@@ -215,9 +198,6 @@ export default function Draws() {
           </div>
         )}
         <div className="flex flex-wrap gap-2">
-          <Button onClick={generate} disabled={generating}>
-            {generating ? <Spinner className="h-4 w-4 border-white" /> : hasDraw ? 'Regenerate Automatic Draw' : 'Generate Automatic Draw'}
-          </Button>
           <Button variant="secondary" onClick={openManual} disabled={eligible.length < 2}>
             Manual Draw
           </Button>
@@ -229,7 +209,7 @@ export default function Draws() {
         <Card>
           <Empty
             title="No draw yet"
-            message="Generate an automatic draw from eligible boxers, or use the manual draw to set your own pairings for this category."
+            message="Use the manual draw to set your own pairings for this category, then build the bracket."
           />
         </Card>
       ) : (
