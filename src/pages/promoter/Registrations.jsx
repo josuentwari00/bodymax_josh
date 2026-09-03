@@ -122,7 +122,7 @@ export default function Registrations() {
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <StatusBadge status={r.status} />
-                        {isPromoter && ['pending_approval', 'needs_correction', 'approved'].includes(r.status) && (
+                        {isPromoter && ['pending_approval', 'needs_correction'].includes(r.status) && (
                           <>
                             <Button size="sm" onClick={() => { setActionReg(r); setAction('approve') }}>Approve</Button>
                             <Button size="sm" variant="secondary" onClick={() => { setActionReg(r); setAction('needs_correction') }}>Fix</Button>

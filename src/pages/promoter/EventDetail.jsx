@@ -362,7 +362,7 @@ export default function EventDetail() {
                     </div>
                     <div className="flex items-center gap-2">
                       <StatusBadge status={r.status} />
-                      {(r.status === 'pending_approval' || r.status === 'needs_correction' || r.status === 'approved') && (
+                      {(r.status === 'pending_approval' || r.status === 'needs_correction') && (
                         <>
                           <Button size="sm" onClick={() => { setActionReg(r); setAction('approve') }}>Approve</Button>
                           <Button size="sm" variant="secondary" onClick={() => { setActionReg(r); setAction('needs_correction') }}>Request Change</Button>
