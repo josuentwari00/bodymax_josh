@@ -27,11 +27,11 @@ export default async (event) => {
       .sort({ round: 1, bracketPosition: 1 })
       .populate({
         path: 'boxerAId',
-        populate: { path: 'boxerId clubId' },
+        populate: { path: 'boxerId' },
       })
       .populate({
         path: 'boxerBId',
-        populate: { path: 'boxerId clubId' },
+        populate: { path: 'boxerId' },
       })
       .populate({
         path: 'winnerId',

@@ -32,8 +32,8 @@ export default async (event) => {
 
     const schedule = await Bout.find({ eventId: link.eventId, status: { $nin: ['cancelled'] } })
       .sort({ boutNumber: 1 })
-      .populate({ path: 'boxerAId', populate: { path: 'boxerId clubId' } })
-      .populate({ path: 'boxerBId', populate: { path: 'boxerId clubId' } })
+      .populate({ path: 'boxerAId', populate: { path: 'boxerId' } })
+      .populate({ path: 'boxerBId', populate: { path: 'boxerId' } })
       .populate({ path: 'winnerId', populate: { path: 'boxerId' } })
       .lean()
 

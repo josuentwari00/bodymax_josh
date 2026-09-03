@@ -20,7 +20,7 @@ export default async (event) => {
         .sort({ createdAt: -1 })
         .limit(8)
         .populate('boxerId', 'fullName gender weightCategory ageCategory')
-        .populate('eventId', 'name eventDate feeStructure')
+        .populate('eventId', 'name eventDate')
         .lean()
 
       const openEvents = events

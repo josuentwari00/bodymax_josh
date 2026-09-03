@@ -73,8 +73,8 @@ export default async (event) => {
 
     // Re-fetch with populated data
     const fresh = await Bout.findById(id)
-      .populate({ path: 'boxerAId', populate: { path: 'boxerId clubId' } })
-      .populate({ path: 'boxerBId', populate: { path: 'boxerId clubId' } })
+      .populate({ path: 'boxerAId', populate: { path: 'boxerId' } })
+      .populate({ path: 'boxerBId', populate: { path: 'boxerId' } })
       .populate({ path: 'winnerId', populate: { path: 'boxerId' } })
       .lean()
 

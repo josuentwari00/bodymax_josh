@@ -101,11 +101,11 @@ export default async (event) => {
       .sort({ boutNumber: 1 })
       .populate({
         path: 'boxerAId',
-        populate: { path: 'boxerId clubId' },
+        populate: { path: 'boxerId' },
       })
       .populate({
         path: 'boxerBId',
-        populate: { path: 'boxerId clubId' },
+        populate: { path: 'boxerId' },
       })
       .populate('winnerId')
       .lean()
