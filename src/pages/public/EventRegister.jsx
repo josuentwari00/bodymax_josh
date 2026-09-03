@@ -94,13 +94,6 @@ export default function EventRegister() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex h-16 max-w-2xl items-center justify-between px-4">
-          <Link to="/" className="text-xl font-bold text-slate-900">Bodymax</Link>
-          <Link to="/" className="text-sm font-medium text-brand-600 hover:text-brand-700">Home</Link>
-        </div>
-      </header>
-
       <main className="mx-auto max-w-2xl px-4 py-8">
         <h1 className="mb-2 text-xl font-bold text-slate-900">Register for {event.name}</h1>
         <p className="text-sm text-slate-500">Fill in your club and the boxer(s) you want to enter.</p>
