@@ -106,7 +106,7 @@ export default async (event) => {
           age: b.age || '',
           gender: b.gender || '',
         },
-        status: 'pending_approval',
+        status: 'approved',
       })
       registered += 1
     }
