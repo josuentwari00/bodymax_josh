@@ -498,7 +498,6 @@ export default function EventDetail() {
       >
         <div className="space-y-4">
           <Input label="Official Weight (kg)" type="number" step="0.1" value={weighWeight} onChange={(e) => setWeighWeight(e.target.value)} required />
-          <Textarea label="Notes (optional)" value={weighNotes} onChange={(e) => setWeighNotes(e.target.value)} rows={2} />
         </div>
       </Modal>
 
