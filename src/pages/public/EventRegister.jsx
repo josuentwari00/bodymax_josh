@@ -102,48 +102,8 @@ export default function EventRegister() {
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-8">
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h1 className="text-2xl font-bold text-slate-900">{event.name}</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            {event.venue}
-            {event.location && ` · ${event.location}`}
-            {event.eventDate && ` · ${new Date(event.eventDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}`}
-          </p>
-
-          {event.description && <p className="mt-4 whitespace-pre-line text-sm text-slate-600">{event.description}</p>}
-
-          {(event.weightCategories.length > 0 || event.ageCategories.length > 0) && (
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {event.weightCategories.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium text-slate-500">Weight Categories</p>
-                  <div className="mt-1 flex flex-wrap gap-1.5">
-                    {event.weightCategories.map((c) => (
-                      <span key={c} className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-700">{c}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {event.ageCategories.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium text-slate-500">Age Categories</p>
-                  <div className="mt-1 flex flex-wrap gap-1.5">
-                    {event.ageCategories.map((c) => (
-                      <span key={c} className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-700">{c}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {event.requirements && (
-          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            <p className="font-semibold">Registration requirements</p>
-            <p className="mt-1 whitespace-pre-line">{event.requirements}</p>
-          </div>
-        )}
+        <h1 className="mb-2 text-xl font-bold text-slate-900">Register for {event.name}</h1>
+        <p className="text-sm text-slate-500">Fill in your club and the boxer(s) you want to enter.</p>
 
         {closed ? (
           <div className="mt-4 rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
