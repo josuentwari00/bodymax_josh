@@ -194,7 +194,7 @@ export default function Draws() {
   if (!event || !registrations) return <Loading />
 
   const eligible = registrations.filter((r) =>
-    ['eligible', 'payment_confirmed', 'weighed', 'completed'].includes(r.status) &&
+    ['approved', 'eligible', 'payment_confirmed', 'weighed', 'completed'].includes(r.status) &&
     (!weight || r.category?.weight === weight) &&
     (!age || r.category?.age === age)
   )
@@ -251,16 +251,27 @@ export default function Draws() {
 
   const autoPair = () => {
     const pool = available().slice()
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[pool[i], pool[j]] = [pool[j], pool[i]]
-    }
     const rows = [...manualPairs]
-    while (pool.length >= 2) {
-      rows.push({ a: pool.pop()._id, b: pool.pop()._id })
+
+    const used = new Set(rows.flatMap((p) => [p.a, p.b]).filter(Boolean).map(String))
+    const remaining = pool.filter((r) => !used.has(String(r._id)))
+
+    // Match boxers from different clubs first to avoid same-club pairings.
+    while (remaining.length >= 2) {
+      let a = remaining.shift()
+      let b = remaining.find((x) => x.clubName !== a.clubName)
+      let bIdx = b ? remaining.indexOf(b) : -1
+
+      if (bIdx === -1) {
+        // No different-club opponent left; pair from same club as a fallback.
+        b = remaining[0]
+        bIdx = 0
+      }
+      remaining.splice(bIdx, 1)
+      rows.push({ a: a._id, b: b._id })
     }
-    if (pool.length === 1) {
-      rows.push({ a: pool.pop()._id, b: '' })
+    if (remaining.length === 1) {
+      rows.push({ a: remaining.pop()._id, b: '' })
     }
     setManualPairs(rows)
   }

@@ -7,7 +7,7 @@ import Bout from './_shared/models/Bout.js'
 import { requireRole, success, errorResponse } from './_shared/middleware/auth.js'
 import { normalizeRequest } from './_shared/request.js'
 
-const ELIGIBLE = { $in: ['eligible', 'payment_confirmed', 'weighed'] }
+const ELIGIBLE = { $in: ['approved', 'eligible', 'payment_confirmed', 'weighed'] }
 
 export default async (event) => {
   event = await normalizeRequest(event)
